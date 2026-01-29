@@ -990,23 +990,6 @@ static void runOnMainAsync(dispatch_block_t block) {
     }
 }
 
-/**
- * 在主线程上异步执行渲染相关代码块
- * 
- * 使用用户交互优先级调度渲染请求，确保与 Electron UI 同步。
- * 这样可以让 Electron 的 UI 事件优先处理，视频渲染不会阻塞用户交互。
- */
-static void runOnMainAsyncForRender(dispatch_block_t block) {
-    if (!block) return;
-    if (isMainThread()) {
-        // 使用 dispatch_async 而不是直接执行，让当前 RunLoop 先处理其他事件
-        // 这样可以确保 Electron UI 事件优先处理
-        dispatch_async(dispatch_get_main_queue(), block);
-    } else {
-        dispatch_async(dispatch_get_main_queue(), block);
-    }
-}
-
 // ==================== MPV 回调函数 ====================
 /**
  * MPV 重绘回调
@@ -1520,9 +1503,11 @@ extern "C" void mpv_request_render(int64_t instanceId) {
     bool wasScheduled = rc->displayScheduled.exchange(true);
     if (wasScheduled) return;
     
-    // 使用专门的渲染调度函数，确保与 Electron UI 同步
-    // 这样可以让 Electron 的 UI 事件（如点击）优先处理
-    runOnMainAsyncForRender(^{
+    // 优化：不再强制切回主线程调用 setNeedsDisplay
+    // CALayer 的 setNeedsDisplay 是线程安全的，可以直接在当前线程调用。
+    // 这样可以避免高频的 dispatch_async 冲击 Electron 的主线程，
+    // 解决高帧率视频播放时主进程 CPU 占用过高的问题。
+    {
         std::shared_ptr<GLRenderContext> inner = nullptr;
         {
             std::lock_guard<std::mutex> lock(g_renderMutex);
@@ -1537,7 +1522,7 @@ extern "C" void mpv_request_render(int64_t instanceId) {
         if (inner->glLayer) {
             [inner->glLayer setNeedsDisplay];
         }
-    });
+    }
 }
 
 // ------------------ render entry (exposed) ------------------
