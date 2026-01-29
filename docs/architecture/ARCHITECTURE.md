@@ -202,6 +202,7 @@ sequenceDiagram
     participant IPC as IPC Handler
     participant App as VideoPlayerApp
     participant Core as CorePlayer
+    participant Sched as PlaybackScheduler
     participant MPV as MpvMediaPlayer
     participant Native as Native Addon
 
@@ -221,6 +222,8 @@ sequenceDiagram
     App->>UI: broadcast('play-video-start')
     
     App->>Core: play(Media)
+    Core->>Sched: schedule('play')
+    Sched->>Core: execute()
     Core->>MPV: play(Media)
     MPV->>Native: command("loadfile", path)
     
