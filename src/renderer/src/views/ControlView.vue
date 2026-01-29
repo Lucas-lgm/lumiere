@@ -302,6 +302,11 @@ const handlePlayerState = (status: PlayerStatusSnapshot) => {
   // 当跳转完成时（isSeeking 从 true 变为 false），重置 isScrubbing
   if (wasSeeking && !isSeeking.value && isScrubbing.value) {
     isScrubbing.value = false
+    // 跳转完成后，强制进行一次同步，忽略保护期
+    // 这样可以确保如果用户松手后，后端状态已经跳到了新位置，UI 能立刻跟上，而不是被旧的保护逻辑挡住
+    if (typeof status.currentTime === 'number') {
+      currentTimeAdjustable.reset(status.currentTime)
+    }
   }
 
   // console.log('[ControlView] handlePlayerState phase',status, isScrubbing.value, isSeeking.value)
@@ -420,6 +425,11 @@ const onSeekStart = () => {
 }
 
 const onSeek = (value: number) => {
+  // 防止 Element Plus 在接收 model-value 更新时反向触发 input 事件导致的死循环
+  // 只有在明确的拖动状态下（mousedown）才接受 seek 输入
+  if (!isScrubbing.value) {
+    return
+  }
   currentTimeAdjustable.onUserInput(value)
   onUserInteraction()
 }
@@ -428,8 +438,8 @@ const onSeekEnd = (value: number) => {
   onUserInteraction()
   // 使用可调值模式提交最终进度（发送 seek 命令）
   currentTimeAdjustable.onUserCommit(value)
-  // 保持 isScrubbing = true，直到 isSeeking 状态更新
-  // handlePlayerState 会在 isSeeking 变为 true 时处理，然后在 isSeeking 变为 false 时重置 isScrubbing
+  // 立即结束拖动状态，不依赖后端的 isSeeking 信号，防止因信号丢失导致进度条卡死
+  isScrubbing.value = false
 }
 
 // 音量滑块（Element Plus）

@@ -106,6 +106,8 @@ export function useAdjustableValue<T>(options: AdjustableValueOptions<T>): Adjus
     lastLocalValue = serverValue
     lastChangeAt = 0
     value.value = serverValue
+    isAdjusting = false
+    log('reset', { serverValue })
   }
 
   return {
