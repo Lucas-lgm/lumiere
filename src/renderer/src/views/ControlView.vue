@@ -2,8 +2,8 @@
   <div 
     class="control-view" 
     :class="{ 
-      'controls-hidden': !controlsVisible,
-      'video-not-ready': !isVideoReady
+      // 'controls-hidden': !controlsVisible,
+      // 'video-not-ready': !isVideoReady
     }"
   >
     <header 

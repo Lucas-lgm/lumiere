@@ -2,6 +2,7 @@ import { app, BrowserWindow, BrowserView, screen } from 'electron'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import { WindowManager } from './windows/windowManager'
+import { WindowSynchronizer } from './windows/WindowSynchronizer'
 import type { CorePlayer } from './core/corePlayer'
 import type { PlayerStatus } from './core/MediaPlayer'
 import type { PlayVideoRequest } from './command/ipcTypes'
@@ -130,7 +131,7 @@ export class VideoPlayerApp {
   private controlView: BrowserView | null = null
   private controlWindow: BrowserWindow | null = null
   private isQuitting: boolean = false
-  private windowSyncTimer: NodeJS.Timeout | null = null
+  private windowSynchronizer: WindowSynchronizer | null = null
   private lastPlayerPhase: string = 'idle'
   /** 当前期望播放的视频路径（用于过滤过期的播放状态） */
   private currentVideoPath: string | null = null
@@ -651,17 +652,6 @@ export class VideoPlayerApp {
     }
   }
 
-
-
-  /** 转发视频时间更新到视频窗口（用于 renderer → main → video window 的转发） */
-  /** 转发视频结束到视频窗口 */
-  forwardVideoEnded(): void {
-    const videoWindow = this.windowManager.getWindow('video')
-    if (videoWindow) {
-      videoWindow.webContents.send('video-ended')
-    }
-  }
-
   createMainWindow() {
     const mainWindow = this.windowManager.createWindow({
       id: 'main',
@@ -670,6 +660,14 @@ export class VideoPlayerApp {
       title: '视频播放器 - 视频列表',
       route: '#/'
     })
+
+    // 预加载视频窗口（隐藏），提升播放启动速度
+    const preloadedVideoWindow = this.createVideoWindow(true)
+    if (preloadedVideoWindow) {
+      this.corePlayer.setVideoWindow(preloadedVideoWindow)
+        .then(() => this.corePlayer.ensureMediaPlayerReadyForPlayback({ show: false, warmup: true }))
+        .catch(() => {})
+    }
 
     // 监听主窗口关闭事件（使用 once 确保只触发一次）
     mainWindow.once('close', async (event) => {
@@ -689,13 +687,12 @@ export class VideoPlayerApp {
     return mainWindow
   }
 
-  createVideoWindow(): BrowserWindow | undefined {
+  createVideoWindow(preload: boolean = false): BrowserWindow | undefined {
     const existing = this.windowManager.getWindow('video')
     if (existing && !existing.isDestroyed()) {
-      existing.show()
-      existing.focus()
-      existing.moveTop()
-      this.ensureControlWindow(existing)
+      if (!preload) {
+        this.ensureControlWindow(existing)
+      }
       return existing
     }
 
@@ -717,14 +714,16 @@ export class VideoPlayerApp {
       route: '#/video',
       frame: false, // 无边框，更干净
       alwaysOnTop: false,
-      show: true,
+      show: false,
       transparent: true // 透明，让 MPV 视频可见
     }
     
     const window = this.windowManager.createWindow(windowConfig)
 
     // 创建控制窗口（透明，跟随视频窗口）
-    this.ensureControlWindow(window)
+    if (!preload) {
+      this.ensureControlWindow(window)
+    }
 
     // 将按键事件转发到控制窗口（如果存在）
     const forwardKeyToControl = (input: Electron.Input) => {
@@ -807,9 +806,9 @@ export class VideoPlayerApp {
         if (this.controlWindow && !this.controlWindow.isDestroyed()) {
           this.controlWindow.close()
         }
-        if (this.windowSyncTimer) {
-          clearInterval(this.windowSyncTimer)
-          this.windowSyncTimer = null
+        if (this.windowSynchronizer) {
+          this.windowSynchronizer.stopSync()
+          this.windowSynchronizer = null
         }
         return
       }
@@ -821,10 +820,10 @@ export class VideoPlayerApp {
       if (this.controlWindow && !this.controlWindow.isDestroyed()) {
         this.controlWindow.close()
       }
-      if (this.windowSyncTimer) {
-        clearInterval(this.windowSyncTimer)
-        this.windowSyncTimer = null
-      }
+      if (this.windowSynchronizer) {
+          this.windowSynchronizer.stopSync()
+          this.windowSynchronizer = null
+        }
       
       window.hide()
       const mainWindow = this.windowManager.getWindow('main')
@@ -839,14 +838,8 @@ export class VideoPlayerApp {
     })
 
     if (window && !window.isDestroyed()) {
-      window.once('ready-to-show', () => {
-        if (!window.isDestroyed()) {
-          window.show()
-          window.focus()
-        }
-      })
-      if (window.isVisible()) {
-        window.focus()
+      if (preload && window.isVisible()) {
+        window.hide()
       }
     }
 
@@ -1051,28 +1044,12 @@ export class VideoPlayerApp {
         }
       })
 
-      // 同步窗口位置和大小：控制窗口 -> 视频窗口
-      const syncVideoToControl = () => {
-        if (videoWindow.isDestroyed() || controlWindow.isDestroyed()) {
-          return
-        }
-        const bounds = controlWindow.getBounds()
-        videoWindow.setBounds(bounds)
-        // 注意：不需要重新设置 windowId，窗口已通过 setVideoWindow 设置
+      // 使用 WindowSynchronizer 处理窗口同步
+      if (this.windowSynchronizer) {
+        this.windowSynchronizer.stopSync()
       }
-
-      // 初始同步一次
-      syncVideoToControl()
-
-      // 监听控制窗口的位置和大小变化（先移除旧的监听器，避免重复注册）
-      controlWindow.removeAllListeners('move')
-      controlWindow.removeAllListeners('resize')
-      controlWindow.removeAllListeners('moved')
-      controlWindow.removeAllListeners('resized')
-      controlWindow.on('move', syncVideoToControl)
-      controlWindow.on('resize', syncVideoToControl)
-      controlWindow.on('moved', syncVideoToControl)
-      controlWindow.on('resized', syncVideoToControl)
+      this.windowSynchronizer = new WindowSynchronizer(videoWindow, controlWindow)
+      this.windowSynchronizer.startSync()
 
       // 监听视频窗口显示/隐藏（先移除旧的监听器，避免重复注册）
       videoWindow.removeAllListeners('show')
@@ -1130,21 +1107,7 @@ export class VideoPlayerApp {
       this.controlWindow = controlWindow
       this.controlView = null
 
-      // 启动窗口同步定时器（兜底）
-      if (this.windowSyncTimer) {
-        clearInterval(this.windowSyncTimer)
-      }
-      this.windowSyncTimer = setInterval(() => {
-        if (videoWindow && !videoWindow.isDestroyed() &&
-            controlWindow && !controlWindow.isDestroyed()) {
-          syncVideoToControl()
-        } else {
-          if (this.windowSyncTimer) {
-            clearInterval(this.windowSyncTimer)
-            this.windowSyncTimer = null
-          }
-        }
-      }, WINDOW_DELAYS.SYNC_INTERVAL_MS)
+
 
       return
     }

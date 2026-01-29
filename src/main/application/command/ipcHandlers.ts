@@ -5,7 +5,6 @@ import { setupFileHandlers } from './handlers/fileHandlers'
 import { setupPlaybackHandlers } from './handlers/playbackHandlers'
 import { setupPlaylistHandlers } from './handlers/playlistHandlers'
 import { setupWindowHandlers } from './handlers/windowHandlers'
-import { setupVideoEventHandlers } from './handlers/videoEventHandlers'
 import { setupMountPathHandlers } from './handlers/mountPathHandlers'
 import { setupNasHandlers } from './handlers/nasHandlers'
 import { setupDebugHandlers } from './handlers/debugHandlers'
@@ -25,7 +24,6 @@ export function setupIpcHandlers(videoPlayerApp: VideoPlayerApp, corePlayer: Cor
   setupPlaybackHandlers(videoPlayerApp, corePlayer)
   setupPlaylistHandlers(videoPlayerApp)
   setupWindowHandlers(videoPlayerApp)
-  setupVideoEventHandlers(videoPlayerApp)
   setupMountPathHandlers()
   setupNasHandlers()
   setupDebugHandlers(corePlayer)

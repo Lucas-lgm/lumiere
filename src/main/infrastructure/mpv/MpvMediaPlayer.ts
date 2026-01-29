@@ -40,6 +40,10 @@ export class MpvMediaPlayer extends EventEmitter implements MediaPlayer {
     this.windowId = windowId
   }
 
+  async ensureReady(): Promise<void> {
+    await this.ensureInitialized()
+  }
+
   private async ensureInitialized(): Promise<void> {
     if (this.isInitialized && this.controller) return
     if (!isLibMPVAvailable()) throw new Error('libmpv is not available')

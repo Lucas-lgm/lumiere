@@ -28,7 +28,7 @@ const WINDOW_PREPARE_DELAYS = {
 
 export interface CorePlayer extends EventEmitter {
   setVideoWindow(window: BrowserWindow | null): Promise<void>
-  ensureMediaPlayerReadyForPlayback(): Promise<void>
+  ensureMediaPlayerReadyForPlayback(options?: { show?: boolean; warmup?: boolean }): Promise<void>
   play(media: Media, startTime?: number): Promise<void>
   pause(): Promise<void>
   resume(): Promise<void>
@@ -128,12 +128,12 @@ class CorePlayerImpl extends EventEmitter implements CorePlayer {
         if (process.platform === 'darwin') {
           windowId = getNSViewPointer(window)
         } else if (process.platform === 'win32') {
-          // Windows 上需要等待窗口完全准备好
-          if (!window.isVisible()) {
+          windowId = getHWNDPointer(window)
+          if (windowId === null && !window.isVisible()) {
             window.show()
             await new Promise(resolve => setTimeout(resolve, WINDOW_PREPARE_DELAYS.WINDOWS_SHOW_DELAY_MS))
+            windowId = getHWNDPointer(window)
           }
-          windowId = getHWNDPointer(window)
         }
         
         if (windowId !== null) {
@@ -152,24 +152,22 @@ class CorePlayerImpl extends EventEmitter implements CorePlayer {
    * 准备播放器用于播放（初始化 MediaPlayer 的窗口）
    * @returns windowId，如果准备失败则返回 undefined
    */
-  private async prepareMediaPlayerForPlayback(): Promise<number | undefined> {
+  private async prepareMediaPlayerForPlayback(options?: {
+    show?: boolean
+    warmup?: boolean
+  }): Promise<number | undefined> {
     if (this.isCleaningUp) return undefined
     if (!this.videoWindow || this.videoWindow.isDestroyed()) return undefined
+    const show = options?.show !== false
+    const warmup = options?.warmup !== false
 
     let windowId: number | undefined
     try {
-      if (!this.videoWindow.isVisible()) {
-        this.videoWindow.show()
-      }
-      this.videoWindow.focus()
-      // Windows 上需要等待窗口完全准备好
-      const waitTime = process.platform === 'win32' 
-        ? WINDOW_PREPARE_DELAYS.WINDOWS_PREPARE_DELAY_MS 
-        : WINDOW_PREPARE_DELAYS.MACOS_PREPARE_DELAY_MS
-      await new Promise(resolve => setTimeout(resolve, waitTime))
-      if (this.videoWindow.isDestroyed()) {
-        logger.warn('Window was destroyed while waiting for preparation')
-        return undefined
+      if (show) {
+        if (!this.videoWindow.isVisible()) {
+          this.videoWindow.show()
+        }
+        this.videoWindow.focus()
       }
       // 按平台获取窗口句柄
       if (process.platform === 'darwin') {
@@ -179,6 +177,13 @@ class CorePlayerImpl extends EventEmitter implements CorePlayer {
           logger.debug('Got NSView pointer', { windowHandle })
         }
       } else if (process.platform === 'win32') {
+        if (!show) return undefined
+        // Windows 上需要等待窗口完全准备好
+        await new Promise(resolve => setTimeout(resolve, WINDOW_PREPARE_DELAYS.WINDOWS_PREPARE_DELAY_MS))
+        if (this.videoWindow.isDestroyed()) {
+          logger.warn('Window was destroyed while waiting for preparation')
+          return undefined
+        }
         // Windows 上，确保窗口完全显示后再获取 HWND
         if (!this.videoWindow.isVisible()) {
           this.videoWindow.show()
@@ -216,6 +221,16 @@ class CorePlayerImpl extends EventEmitter implements CorePlayer {
       
       this.setupResizeHandler()
       this.setupEventHandlers()
+
+      if (warmup && process.platform === 'darwin' && this.mediaPlayer instanceof MpvMediaPlayer) {
+        try {
+          await this.mediaPlayer.ensureReady()
+        } catch (error) {
+          logger.warn('Warmup MpvMediaPlayer failed', {
+            error: error instanceof Error ? error.message : String(error)
+          })
+        }
+      }
       
       return windowId
     } catch (error) {
@@ -226,8 +241,11 @@ class CorePlayerImpl extends EventEmitter implements CorePlayer {
     }
   }
 
-  async ensureMediaPlayerReadyForPlayback(): Promise<void> {
-    const windowId = await this.prepareMediaPlayerForPlayback()
+  async ensureMediaPlayerReadyForPlayback(options?: {
+    show?: boolean
+    warmup?: boolean
+  }): Promise<void> {
+    const windowId = await this.prepareMediaPlayerForPlayback(options)
     if (!windowId) {
       throw new Error('Failed to prepare media player for playback')
     }

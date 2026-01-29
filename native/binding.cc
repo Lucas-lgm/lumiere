@@ -275,6 +275,7 @@ Napi::Value AttachView(const Napi::CallbackInfo& info) {
             return env.Null();
         }
     }
+    mpv_set_force_black_mode(id, 1);
 #elif defined(_WIN32)
     // Windows: 使用 wid 嵌入方式
     // viewPtr 是 HWND，通过 SetWindowId 设置
