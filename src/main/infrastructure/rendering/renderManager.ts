@@ -118,12 +118,12 @@ export class RenderManager {
       
       if (newInterval < this.currentRenderInterval) {
         this.currentRenderInterval = newInterval
-        console.log(`[RenderManager] ⚠️ Render falling behind! Actual interval: ${actualInterval.toFixed(1)}ms, reducing to ${this.currentRenderInterval}ms (base: ${this.baseRenderInterval}ms)`)
+        console.log(`[RenderManager] [WARN] Render falling behind! Actual interval: ${actualInterval.toFixed(1)}ms, reducing to ${this.currentRenderInterval}ms (base: ${this.baseRenderInterval}ms)`)
       }
     } else if (actualInterval >= this.baseRenderInterval * 0.9 && this.currentRenderInterval < this.baseRenderInterval) {
       // 渲染跟上了，恢复到基础间隔
       this.currentRenderInterval = this.baseRenderInterval
-      console.log(`[RenderManager] ✅ Render caught up! Actual interval: ${actualInterval.toFixed(1)}ms, restoring to ${this.currentRenderInterval}ms`)
+      console.log(`[RenderManager] [OK] Render caught up! Actual interval: ${actualInterval.toFixed(1)}ms, restoring to ${this.currentRenderInterval}ms`)
     }
   }
 
@@ -168,7 +168,7 @@ export class RenderManager {
       if (renderMode === 'js-driven') {
         this.renderLoopActive = true
         this.renderLoopHandle = setTimeout(this.renderLoop, this.currentRenderInterval)
-        console.log(`[RenderManager] ✅ Started data-driven render loop (interval: ${this.currentRenderInterval}ms)`)
+        console.log(`[RenderManager] [OK] Started data-driven render loop (interval: ${this.currentRenderInterval}ms)`)
       }
     }
   }
@@ -205,7 +205,7 @@ export class RenderManager {
       return
     }
     
-    console.log(`[RenderManager] 📹 Video FPS: ${fps?.toFixed(2)}`)
+    console.log(`[RenderManager] Video FPS: ${fps?.toFixed(2)}`)
     this.currentVideoFps = normalizedFps
     
     const oldBaseInterval = this.baseRenderInterval
@@ -218,14 +218,14 @@ export class RenderManager {
       this.currentRenderInterval = this.baseRenderInterval
       this.renderRequestCount = 0 // 重置计数
       this.lastRenderRequestTime = 0 // 重置时间戳
-      console.log(`[RenderManager] 📹 Video FPS: ${normalizedFps.toFixed(2)}, Base render interval: ${this.baseRenderInterval}ms`)
+      console.log(`[RenderManager] Video FPS: ${normalizedFps.toFixed(2)}, Base render interval: ${this.baseRenderInterval}ms`)
     } else {
       // 帧率未知或无效，使用默认值
       this.baseRenderInterval = this.DEFAULT_RENDER_INTERVAL_MS
       this.currentRenderInterval = this.baseRenderInterval
       this.renderRequestCount = 0 // 重置计数
       this.lastRenderRequestTime = 0 // 重置时间戳
-      console.log(`[RenderManager] 📹 Video FPS: unknown, using default render interval: ${this.baseRenderInterval}ms`)
+      console.log(`[RenderManager] Video FPS: unknown, using default render interval: ${this.baseRenderInterval}ms`)
     }
     
     // 只有当渲染间隔真正改变且渲染循环正在运行时，才需要重启
@@ -241,7 +241,7 @@ export class RenderManager {
    */
   markSeekComplete(): void {
     this.pendingSeekRender = true
-    console.log('[RenderManager] ✅ Seek completed, marked for render')
+    console.log('[RenderManager] [OK] Seek completed, marked for render')
   }
 
   /**
@@ -263,7 +263,7 @@ export class RenderManager {
       // 只在非播放状态时标记需要渲染（播放中由循环自动处理）
       if (currentStatus.phase !== 'playing') {
         this.pendingResizeRender = true
-        console.log('[RenderManager] ✅ Resize stabilized, marked for render (non-playing)')
+        console.log('[RenderManager] [OK] Resize stabilized, marked for render (non-playing)')
       } else {
         console.log('[RenderManager] Resize stabilized (playing), render loop will handle it')
       }
