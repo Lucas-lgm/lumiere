@@ -18,58 +18,72 @@
 The system follows a strict **Layered Architecture**. Dependencies flow **inwards** (or downwards).
 
 ```mermaid
-graph TB
-    subgraph "Renderer Process (UI)"
-        UI_Comp[Vue Components]
-        UI_Store[Composables/State]
-        UI_Comp --> UI_Store
+flowchart TB
+    %% Styling
+    classDef ui fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#0d47a1
+    classDef ipc fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#4a148c
+    classDef app fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#1b5e20
+    classDef domain fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#bf360c
+    classDef infra fill:#eceff1,stroke:#546e7a,stroke-width:2px,color:#263238
+    classDef native fill:#263238,stroke:#000,stroke-width:2px,color:#fff
+
+    subgraph UserInterface ["Presentation Layer (Renderer Process)"]
+        direction TB
+        UI_Vue[UI Components]:::ui
+        UI_State[UI State & Logic]:::ui
+        UI_Vue --> UI_State
     end
 
-    subgraph "Main Process (Node.js)"
-        IPC_Server[IPC Handlers]
+    subgraph CommLayer ["Communication Layer"]
+        IPC[IPC Bridge / API Gateway]:::ipc
+    end
+
+    subgraph MainProcess ["Backend Logic (Main Process)"]
+        direction TB
         
-        subgraph "Application Layer"
-            VPA[VideoPlayerApp]
-            Config[ConfigManager]
-            WM[WindowManager]
+        subgraph AppLayer ["Application Layer"]
+            App_Orch["VideoPlayerApp<br/>(Orchestrator)"]:::app
+            App_Win[WindowManager]:::app
+            App_Config[ConfigManager]:::app
         end
-        
-        subgraph "Core Domain Layer"
-            CP[CorePlayer]
-            PSM[PlayerStateMachine]
-            Sched[PlaybackScheduler]
-            Models[Media, Playlist, PlaybackSession]
+
+        subgraph DomainLayer ["Core Domain Layer"]
+            Core_Facade["CorePlayer<br/>(Facade)"]:::domain
+            Core_SM[PlayerStateMachine]:::domain
+            Core_Sched[PlaybackScheduler]:::domain
+            Core_Model["Domain Models<br/>(Media, Playlist)"]:::domain
         end
-        
-        subgraph "Infrastructure Layer"
-            MMP[MpvMediaPlayer]
-            Log[Logger]
-            FS[FileSystemService]
-            TQ[TaskQueue]
+
+        subgraph InfraLayer ["Infrastructure Layer"]
+            Infra_MPV["MpvMediaPlayer<br/>(Adapter)"]:::infra
+            Infra_FS[FileSystemService]:::infra
+            Infra_Task[TaskQueue]:::infra
         end
     end
 
-    subgraph "Native Side (C++/Obj-C)"
-        NAPI[Node-API Binding]
-        Render[OpenGL/EDR Renderer]
-        MPV[libmpv Core]
+    subgraph NativeLayer ["Native Layer (C++/Obj-C)"]
+        Native_API[Node-API Binding]:::native
+        Native_Lib[libmpv Core]:::native
+        Native_Render[OpenGL/EDR Renderer]:::native
     end
 
-    %% Communications
-    UI_Store <-->|IPC APIs| IPC_Server
-    IPC_Server --> VPA
-    IPC_Server --> CP
+    %% Flows
+    UI_State <==>|JSON| IPC
+    IPC ==>|Commands| App_Orch
     
-    VPA --> CP
-    VPA --> Config
-    VPA --> WM
+    App_Orch --> App_Win
+    App_Orch --> App_Config
+    App_Orch --> Core_Facade
+
+    Core_Facade --> Core_SM
+    Core_Facade --> Core_Sched
+    Core_Facade --> Infra_MPV
+
+    Core_Sched --> Infra_Task
     
-    CP --> MMP
-    CP --> PSM
-    
-    MMP --> NAPI
-    NAPI --> MPV
-    NAPI --> Render
+    Infra_MPV --> Native_API
+    Native_API --> Native_Lib
+    Native_API --> Native_Render
 ```
 
 ### 2.1 Key Modules Responsibilities
