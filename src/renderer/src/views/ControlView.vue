@@ -147,6 +147,8 @@ const isPlaying = ref(false)
 // 进度条使用可调值模式（短暂保护期 + 正在拖动时本地优先）
 const currentTimeAdjustable = useAdjustableValue<number>({
   initial: 0,
+  // 增加保护期到 1s，防止 seek 回弹闪烁
+  justChangedWindowMs: 1000,
   debugLabel: 'timeline',
   // 进度条目前只在松手时真正 seek，这里不在 input 阶段发送命令
   sendOnInput: false,
@@ -435,23 +437,24 @@ const onSeekStart = () => {
 }
 
 const onSeek = (value: number) => {
-  if (!isScrubbing.value) {
-    // 视为“点击跳转”：直接提交而不是忽略
-    console.log('[ControlView] onSeek click commit (not scrubbing)', value)
-    onUserInteraction()
-    currentTimeAdjustable.onUserCommit(value)
-  } else {
-    console.log('[ControlView] onSeek input (scrubbing)', value)
-    currentTimeAdjustable.onUserInput(value)
-    onUserInteraction()
-  }
+  // 防止 Element Plus 在接收 model-value 更新时反向触发 input 事件导致的死循环
+  // 只有在明确的拖动状态下（mousedown）才接受 seek 输入
+  // 修改：点击进度条时可能不会先触发 mousedown (isScrubbing=true)，
+  // 但我们仍然应该处理 input 事件来更新 UI，并等待 change 事件提交。
+  // 统一走 onUserInput，不直接提交，避免重复 seek。
+  
+  const clampedValue = Math.max(0, Math.min(duration.value || 0, value))
+  console.log('[ControlView] onSeek input', { raw: value, clamped: clampedValue, duration: duration.value, isScrubbing: isScrubbing.value })
+  currentTimeAdjustable.onUserInput(clampedValue)
+  onUserInteraction()
 }
 
 const onSeekEnd = (value: number) => {
-  console.log('[ControlView] onSeekEnd commit', value)
   onUserInteraction()
+  const clampedValue = Math.max(0, Math.min(duration.value || 0, value))
+  console.log('[ControlView] onSeekEnd commit', { raw: value, clamped: clampedValue, duration: duration.value })
   // 使用可调值模式提交最终进度（发送 seek 命令）
-  currentTimeAdjustable.onUserCommit(value)
+  currentTimeAdjustable.onUserCommit(clampedValue)
   // 立即结束拖动状态，不依赖后端的 isSeeking 信号，防止因信号丢失导致进度条卡死
   isScrubbing.value = false
 }
