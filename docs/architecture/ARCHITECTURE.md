@@ -91,66 +91,92 @@ This diagram details the static structure and relationships between the main cla
 
 ```mermaid
 classDiagram
-    %% Core Interfaces
-    class MediaPlayer {
-        <<Interface>>
-        +play(media)
-        +pause()
-        +seek()
-        +setVolume()
-        +getCurrentSession()
-        +onStatusChange(cb)
+    direction TB
+    
+    namespace Application {
+        class VideoPlayerApp {
+            -corePlayer: CorePlayer
+            -windowManager: WindowManager
+            -configManager: ConfigManager
+            -playlist: Playlist
+            +createMainWindow()
+            +handlePlayVideo(path)
+        }
+        
+        class ConfigManager {
+            -volume: number
+            -playbackPositions: Map
+            +load()
+            +save()
+        }
+
+        class WindowManager {
+            -windows: Map
+            +createWindow(config)
+            +getWindow(id)
+        }
+        
+        class Playlist {
+            -items: Array
+            +add(item)
+            +next()
+        }
     }
 
-    class CorePlayer {
-        <<Interface>>
-        +play(media)
-        +getPlayerStatus()
-        +setVideoWindow(win)
+    namespace CoreDomain {
+        class CorePlayer {
+            <<Interface>>
+            +play(media)
+            +getPlayerStatus()
+            +setVideoWindow(win)
+        }
+
+        class CorePlayerImpl {
+            -mediaPlayer: MediaPlayer
+            -stateMachine: PlayerStateMachine
+            -scheduler: PlaybackScheduler
+            +play(media)
+            +updateFromPlayerStatus()
+        }
+
+        class PlaybackScheduler {
+            -queue: TaskQueue
+            -stateMachine: PlayerStateMachine
+            +schedule(task)
+            -tryProcessNext()
+        }
+
+        class TaskQueue {
+            -tasks: Array
+            +enqueue(task)
+            +dequeue()
+            +peek()
+        }
+        
+        class PlayerStateMachine {
+            -state: InternalState
+            +getState(): PlayerStatus
+            +update(session)
+        }
     }
 
-    %% Implementations
-    class MpvMediaPlayer {
-        -controller: LibMPVController
-        -windowId: number
-        +initialize(windowId)
-        +play(media)
-    }
+    namespace Infrastructure {
+        class MediaPlayer {
+            <<Interface>>
+            +play(media)
+            +pause()
+            +seek()
+            +setVolume()
+            +getCurrentSession()
+            +onStatusChange(cb)
+        }
 
-    class CorePlayerImpl {
-        -mediaPlayer: MediaPlayer
-        -stateMachine: PlayerStateMachine
-        -renderManager: RenderManager
-        +play(media)
-        +updateFromPlayerStatus()
-    }
-
-    class VideoPlayerApp {
-        -corePlayer: CorePlayer
-        -windowManager: WindowManager
-        -configManager: ConfigManager
-        -playlist: Playlist
-        +createMainWindow()
-        +handlePlayVideo(path)
-    }
-
-    class PlayerStateMachine {
-        -state: InternalState
-        +getState(): PlayerStatus
-        +update(session)
-    }
-
-    class ConfigManager {
-        -volume: number
-        -playbackPositions: Map
-        +load()
-        +save()
-    }
-
-    class WindowManager {
-        -windows: Map
-        +createWindow(config)
-        +getWindow(id)
+        class MpvMediaPlayer {
+            -controller: LibMPVController
+            -windowId: number
+            +initialize(windowId)
+            +play(media)
+        }
     }
 
     %% Relationships
@@ -160,12 +186,13 @@ classDiagram
     VideoPlayerApp --> Playlist : Manages
     
     CorePlayerImpl ..|> CorePlayer : Implements
-    CorePlayerImpl --> MediaPlayer : Uses
+    CorePlayerImpl --> PlaybackScheduler : Schedules
+    CorePlayerImpl --> MediaPlayer : Reads Status
     CorePlayerImpl --> PlayerStateMachine : Updates
-    CorePlayerImpl --> PlaybackScheduler : Uses
     
     PlaybackScheduler --> TaskQueue : Uses
     PlaybackScheduler --> PlayerStateMachine : Observes
+    PlaybackScheduler --> MediaPlayer : Executes
     
     MpvMediaPlayer ..|> MediaPlayer : Implements
 ```
