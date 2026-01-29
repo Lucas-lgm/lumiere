@@ -379,10 +379,13 @@ static bool check_dolby_vision_track(mpv_handle *mpv);
 
     bool sizeChanged = (w != rc->lastRenderedWidth || h != rc->lastRenderedHeight);
 
-    CFRunLoopRef runLoop = CFRunLoopGetCurrent();
-    if (runLoop) {
-        CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.0, false);
-    }
+    // 移除手动 RunLoop 调用：
+    // 渲染应该在独立线程 (CVDisplayLink) 中高效运行，不应试图处理主线程事件。
+    // 让主线程 (Electron UI) 独享 CPU 时间片，从而保证最佳的 UI 响应性。
+    // CFRunLoopRef runLoop = CFRunLoopGetCurrent();
+    // if (runLoop) {
+    //    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.0, false);
+    // }
     
     int res = mpv_render_context_render(rc->mpvRenderCtx, params);
     if (res < 0) {

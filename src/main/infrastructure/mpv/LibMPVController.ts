@@ -275,7 +275,7 @@ export class LibMPVController extends EventEmitter {
         this.binding.attachView(this.instanceId, windowId)
         this.binding.setHdrMode(this.instanceId, this.hdrEnabled)
         // 默认启用 JavaScript 驱动渲染模式
-        this.binding.setJsDrivenRenderMode(this.instanceId, true)
+        this.binding.setJsDrivenRenderMode(this.instanceId, false)
         console.log('[libmpv] ✅ Enabled JavaScript-driven render mode by default')
       } else if (process.platform === 'win32') {
         // Windows: 使用 wid 嵌入方式
