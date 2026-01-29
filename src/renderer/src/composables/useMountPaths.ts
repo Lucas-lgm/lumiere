@@ -18,21 +18,20 @@ export function useMountPaths() {
     try {
       // 发送IPC消息添加挂载路径
       return new Promise((resolve) => {
-        const handler = (data: { mountPath: MountPath }) => {
+        const cleanup = window.electronAPI.fileSystem.onMountPathAdded((data) => {
           // 检查是否已存在
           if (!mountPaths.value.find(mp => mp.id === data.mountPath.id)) {
             mountPaths.value.push(data.mountPath)
           }
-          window.electronAPI.removeListener('mount-path-added', handler)
+          cleanup()
           loading.value = false
           resolve(data.mountPath)
-        }
-        window.electronAPI.on('mount-path-added', handler)
-        window.electronAPI.send('mount-path-add', { path })
+        })
+        window.electronAPI.fileSystem.addMountPath(path)
         
         // 超时处理
         setTimeout(() => {
-          window.electronAPI.removeListener('mount-path-added', handler)
+          cleanup()
           loading.value = false
           resolve(null)
         }, 30000) // 30秒超时
@@ -48,12 +47,12 @@ export function useMountPaths() {
    * 移除挂载路径
    */
   const removeMountPath = (id: string) => {
-    if (!window.electronAPI) return
+    if (!window.electronAPI?.fileSystem) return
 
     const index = mountPaths.value.findIndex(mp => mp.id === id)
     if (index !== -1) {
       mountPaths.value.splice(index, 1)
-      window.electronAPI.send('mount-path-remove', { id })
+      window.electronAPI.fileSystem.removeMountPath(id)
     }
   }
 
@@ -69,20 +68,19 @@ export function useMountPaths() {
     loading.value = true
     try {
       return new Promise((resolve) => {
-        const handler = (data: { id: string, resourceCount: number }) => {
+        const cleanup = window.electronAPI.fileSystem.onMountPathScanned((data) => {
           if (data.id === id) {
             const index = mountPaths.value.findIndex(mp => mp.id === id)
             if (index !== -1) {
-              mountPaths.value[index].resourceCount = data.resourceCount
+              mountPaths.value[index].resourceCount = data.resourceCount || 0
               mountPaths.value[index].lastScanned = new Date()
             }
-            window.electronAPI.removeListener('mount-path-scanned', handler)
+            cleanup()
             loading.value = false
             resolve()
           }
-        }
-        window.electronAPI.on('mount-path-scanned', handler)
-        window.electronAPI.send('mount-path-refresh', { id })
+        })
+        window.electronAPI.fileSystem.refreshMountPath(id)
       })
     } catch (error) {
       console.error('刷新扫描失败:', error)
@@ -101,16 +99,17 @@ export function useMountPaths() {
    * 初始化挂载路径列表（从主进程获取）
    */
   const initMountPaths = () => {
-    if (!window.electronAPI) return
+    if (!window.electronAPI?.fileSystem) return () => {}
 
     // 请求挂载路径列表
-    window.electronAPI.send('get-mount-paths')
+    window.electronAPI.fileSystem.getMountPaths()
     
     // 监听挂载路径列表更新
-    const handler = (data: { mountPaths: MountPath[] }) => {
+    const cleanup = window.electronAPI.fileSystem.onMountPathsUpdated((data) => {
       mountPaths.value = data.mountPaths
-    }
-    window.electronAPI.on('mount-paths-updated', handler)
+    })
+    
+    return cleanup
   }
 
   return {

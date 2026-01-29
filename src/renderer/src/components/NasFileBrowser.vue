@@ -152,7 +152,7 @@ const pathParts = computed(() => {
 
 // 加载目录
 const loadDirectory = async (path?: string) => {
-  if (!window.electronAPI) {
+  if (!window.electronAPI?.nas) {
     error.value = '无法连接到主进程'
     return
   }
@@ -162,19 +162,18 @@ const loadDirectory = async (path?: string) => {
 
   try {
     const result = await new Promise<{ items: FileItem[]; error?: string }>((resolve, reject) => {
-      const handler = (data: { items: FileItem[]; error?: string }) => {
-        window.electronAPI.removeListener('nas-directory-read-result', handler)
+      const cleanup = window.electronAPI.nas.onDirectoryReadResult((data) => {
+        cleanup()
         resolve(data)
-      }
-      window.electronAPI.on('nas-directory-read-result', handler)
-      window.electronAPI.send('nas-read-directory', {
+      })
+      window.electronAPI.nas.readDirectory({
         connectionId: props.nasConnection.id,
         path
       })
       
       // 超时处理
       setTimeout(() => {
-        window.electronAPI.removeListener('nas-directory-read-result', handler)
+        cleanup()
         reject(new Error('读取目录超时'))
       }, 10000)
     })

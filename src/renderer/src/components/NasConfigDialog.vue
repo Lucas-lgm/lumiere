@@ -349,16 +349,15 @@ const handleTest = async () => {
       
       // 发送测试连接请求
       const result = await new Promise<{ success: boolean; error?: string }>((resolve) => {
-        const handler = (data: { success: boolean; error?: string }) => {
-          window.electronAPI.removeListener('nas-test-connection-result', handler)
+        const cleanup = window.electronAPI.nas.onTestConnectionResult((data) => {
+          cleanup()
           resolve(data)
-        }
-        window.electronAPI.on('nas-test-connection-result', handler)
-        window.electronAPI.send('nas-test-connection', { config })
+        })
+        window.electronAPI.nas.testConnection({ config })
         
         // 超时处理
         setTimeout(() => {
-          window.electronAPI.removeListener('nas-test-connection-result', handler)
+          cleanup()
           resolve({ success: false, error: '连接测试超时' })
         }, 10000)
       })
@@ -430,15 +429,14 @@ const handleBrowseNetwork = async () => {
 
   try {
     const result = await new Promise<{ success: boolean; error?: string }>((resolve) => {
-      const handler = (data: { success: boolean; error?: string }) => {
-        window.electronAPI.removeListener('nas-open-network-browser-result', handler)
+      const cleanup = window.electronAPI.nas.onOpenNetworkBrowserResult((data) => {
+        cleanup()
         resolve(data)
-      }
-      window.electronAPI.on('nas-open-network-browser-result', handler)
-      window.electronAPI.send('nas-open-network-browser')
+      })
+      window.electronAPI.nas.openNetworkBrowser()
       
       setTimeout(() => {
-        window.electronAPI.removeListener('nas-open-network-browser-result', handler)
+        cleanup()
         resolve({ success: false, error: '操作超时' })
       }, 5000)
     })
@@ -471,12 +469,11 @@ const handleListShares = async () => {
 
   try {
     const result = await new Promise<{ shares: Array<{ name: string; type: string; comment?: string }>; error?: string }>((resolve) => {
-      const handler = (data: { shares: Array<{ name: string; type: string; comment?: string }>; error?: string }) => {
-        window.electronAPI.removeListener('nas-list-shares-result', handler)
+      const cleanup = window.electronAPI.nas.onListSharesResult((data) => {
+        cleanup()
         resolve(data)
-      }
-      window.electronAPI.on('nas-list-shares-result', handler)
-      window.electronAPI.send('nas-list-shares', {
+      })
+      window.electronAPI.nas.listShares({
         protocol: form.protocol,
         host: form.host,
         username: form.username || undefined,
@@ -486,7 +483,7 @@ const handleListShares = async () => {
       })
       
       setTimeout(() => {
-        window.electronAPI.removeListener('nas-list-shares-result', handler)
+        cleanup()
         resolve({ shares: [], error: form.protocol === 'smb' ? '操作超时（可能需要安装 smbclient 工具）' : '操作超时' })
       }, 15000)
     })

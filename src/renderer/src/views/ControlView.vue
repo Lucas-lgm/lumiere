@@ -74,9 +74,9 @@
       <div class="control-bar">
         <div class="progress-container">
           <el-slider
-            :model-value="currentTime"
+            :model-value="sliderValue"
             :min="0"
-            :max="duration > 0 ? duration : 100"
+            :max="sliderMax"
             :step="0.1"
             :show-tooltip="true"
             :format-tooltip="formatTime"
@@ -139,7 +139,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useControlBarAutoHide } from '../composables/useControlBarAutoHide'
 import { useAdjustableValue } from '../composables/useAdjustableValue'
 
@@ -157,12 +157,18 @@ const currentTimeAdjustable = useAdjustableValue<number>({
       const dur = typeof duration.value === 'number' ? duration.value : 0
       const target = dur > 0 ? Math.max(0, Math.min(dur, t)) : t
       console.log('[ControlView] send control-seek', { target, raw: t, duration: dur })
-      window.electronAPI.send('control-seek', target)
+      window.electronAPI.player.seek(target)
     }
   }
 })
 const currentTime = currentTimeAdjustable.value
 const duration = ref(0)
+
+// 计算属性：确保传递给 Slider 的值永远不会超过 Max
+// 这能防止 Element Plus 因自动 Clamp 而触发意外的 input 事件
+const sliderMax = computed(() => (duration.value > 0 ? duration.value : 100))
+const sliderValue = computed(() => Math.min(currentTime.value, sliderMax.value))
+
 const currentVideoName = ref<string>('')
 const isLoading = ref(false)
 const isSeeking = ref(false)
@@ -195,7 +201,7 @@ const volumeAdjustable = useAdjustableValue<number>({
     // eslint-disable-next-line no-console
     console.log('[ControlView] send control-volume', v)
     if (window.electronAPI) {
-      window.electronAPI.send('control-volume', Math.round(v))
+      window.electronAPI.player.setVolume(Math.round(v))
     }
   }
 })
@@ -321,6 +327,14 @@ const handlePlayerState = (status: PlayerStatusSnapshot) => {
     }
   }
 
+  // 状态自愈：如果 UI 不再处于拖动状态，且后端也不在跳转中，
+  // 那么 adjustable 也不应该处于 adjusting 状态。
+  // 这可以解决因异常事件（如 Element Plus 自动触发的 input）导致的死锁。
+  if (!isScrubbing.value && !isSeeking.value && currentTimeAdjustable.isAdjusting) {
+    console.warn('[ControlView] Auto-correcting stuck adjusting state')
+    currentTimeAdjustable.forceEndAdjusting()
+  }
+
   // console.log('[ControlView] handlePlayerState phase',status, isScrubbing.value, isSeeking.value)
   
   // 更新 currentTime（只在非拖动、非跳转状态下更新，且不是播放结束状态）
@@ -368,7 +382,7 @@ const toggleFullscreen = () => {
   controlsVisible.value = false
   
   if (window.electronAPI) {
-    window.electronAPI.send('control-toggle-fullscreen')
+    window.electronAPI.player.toggleFullscreen()
   }
   
   // 延迟恢复控制栏显示（如果需要）
@@ -379,20 +393,20 @@ const toggleFullscreen = () => {
 
 const handleWindowAction = (action: 'close' | 'minimize' | 'maximize') => {
   if (window.electronAPI) {
-    window.electronAPI.send('control-window-action', action)
+    window.electronAPI.player.windowAction(action)
   }
 }
 
 const toggleHdr = () => {
   hdrEnabled.value = !hdrEnabled.value
   if (window.electronAPI) {
-    window.electronAPI.send('control-hdr', hdrEnabled.value)
+    window.electronAPI.player.setHdr(hdrEnabled.value)
   }
 }
 
 const playFromPlaylist = (item: PlaylistItem) => {
   if (window.electronAPI) {
-    window.electronAPI.send('play-video', {
+    window.electronAPI.player.playMedia({
       name: item.name,
       path: item.path,
       // 将后端反推的起播时间传回主进程，用于记忆播放
@@ -406,26 +420,26 @@ const togglePlayPause = () => {
   // 不立即改变 isPlaying，等待主进程响应回来的状态
   // 根据当前状态发送相反的命令
   if (window.electronAPI) {
-    window.electronAPI.send(isPlaying.value ? 'control-pause' : 'control-play')
+    isPlaying.value ? window.electronAPI.player.pause() : window.electronAPI.player.resume()
   }
 }
 
 const playPrevFromPlaylist = () => {
   if (window.electronAPI) {
-    window.electronAPI.send('play-playlist-prev')
+    window.electronAPI.player.playPrev()
   }
 }
 
 const playNextFromPlaylist = () => {
   if (window.electronAPI) {
-    window.electronAPI.send('play-playlist-next')
+    window.electronAPI.player.playNext()
   }
 }
 
 const stop = () => {
   // 不立即改变 isPlaying，等待主进程响应回来的状态（phase === 'stopped'）
   if (window.electronAPI) {
-    window.electronAPI.send('control-stop')
+    window.electronAPI.player.stop()
   }
 }
 
@@ -444,6 +458,10 @@ const onSeek = (value: number) => {
   // 但我们仍然应该处理 input 事件来更新 UI，并等待 change 事件提交。
   // 统一走 onUserInput，不直接提交，避免重复 seek。
   
+  // FIX: 如果 duration 无效（如尚未加载完成），忽略 seek 输入
+  // 这防止 Element Plus 在 duration=0 时因 clamp 触发的自动 input 事件导致死循环 (isAdjusting 卡死)
+  if (!duration.value || duration.value <= 0) return
+
   const clampedValue = Math.max(0, Math.min(duration.value || 0, value))
   console.log('[ControlView] onSeek input', { raw: value, clamped: clampedValue, duration: duration.value, isScrubbing: isScrubbing.value })
   currentTimeAdjustable.onUserInput(clampedValue)
@@ -493,28 +511,30 @@ const toggleMute = () => {
   }
 }
 
+const unsubs: (() => void)[] = []
+
 onMounted(() => {
   if (window.electronAPI) {
     // 当前播放条目变更通知（由主进程广播）
-    window.electronAPI.on('current-video-changed', handlePlayVideo)
-    window.electronAPI.on('player-status', handlePlayerState)
-    window.electronAPI.on('playlist-updated', handlePlaylistUpdated)
+    unsubs.push(window.electronAPI.player.onCurrentVideoChanged(handlePlayVideo))
+    unsubs.push(window.electronAPI.player.onStatus(handlePlayerState))
+    unsubs.push(window.electronAPI.player.onPlaylistUpdated(handlePlaylistUpdated))
     
     // 控制栏显示/隐藏 IPC 消息（macOS BrowserView 模式）
-    window.electronAPI.on('control-bar-show', () => {
+    unsubs.push(window.electronAPI.player.onControlBarShow(() => {
       showControls()
-    })
-    window.electronAPI.on('control-bar-schedule-hide', () => {
+    }))
+    unsubs.push(window.electronAPI.player.onControlBarScheduleHide(() => {
       if (isPlaying.value && !isLoading.value && !isScrubbing.value) {
         scheduleHide()
       }
-    })
+    }))
     // 立即隐藏控制栏（用于全屏切换等场景，避免渲染延迟）
-    window.electronAPI.on('control-bar-hide-immediate', () => {
+    unsubs.push(window.electronAPI.player.onControlBarHideImmediate(() => {
       controlsVisible.value = false
-    })
+    }))
     
-    window.electronAPI.send('get-playlist')
+    window.electronAPI.player.getPlaylist()
   }
 })
 
@@ -522,11 +542,7 @@ onUnmounted(() => {
   // 清理自动隐藏 composable 的资源
   cleanupAutoHide()
   
-  if (window.electronAPI) {
-    window.electronAPI.removeListener('current-video-changed', handlePlayVideo)
-    window.electronAPI.removeListener('player-status', handlePlayerState)
-    window.electronAPI.removeListener('playlist-updated', handlePlaylistUpdated)
-  }
+  unsubs.forEach(unsub => unsub())
 })
 </script>
 

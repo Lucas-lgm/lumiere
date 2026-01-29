@@ -136,6 +136,7 @@ const { nasConnections: nasConnectionsList, addNasConnection, removeNasConnectio
 const loading = ref(false)
 const selectedNasConnection = ref<string | null>(null)
 const showNasFileBrowser = ref(false)
+const ipcCleanups: (() => void)[] = []
 
 // 计算选中的 NAS 连接数据
 const selectedNasConnectionData = computed(() => {
@@ -193,8 +194,8 @@ const handleMountPathSelect = (id: string) => {
 
 // 处理添加文件
 const handleAddFile = () => {
-  if (!window.electronAPI) return
-  window.electronAPI.send('select-video-file')
+  if (!window.electronAPI?.fileSystem) return
+  window.electronAPI.fileSystem.selectVideoFile()
 }
 
 // 处理添加URL
@@ -237,10 +238,10 @@ const handleUrlCancel = () => {
 
 // 处理挂载路径添加
 const handleMountPathAdd = async () => {
-  if (!window.electronAPI) return
+  if (!window.electronAPI?.fileSystem) return
   
   // 发送IPC消息，打开文件夹选择对话框
-  window.electronAPI.send('select-mount-path')
+  window.electronAPI.fileSystem.selectMountPath()
 }
 
 // 处理挂载路径移除
@@ -257,10 +258,6 @@ const handleMountPathRemove = (id: string) => {
 // 处理挂载路径刷新
 const handleMountPathRefresh = async (id: string) => {
   await refreshMountPath(id)
-  // 刷新后重新扫描资源
-  if (window.electronAPI) {
-    window.electronAPI.send('mount-path-refresh', { id })
-  }
 }
 
 // 处理 NAS 添加
@@ -331,7 +328,7 @@ const handleNasFilePlay = (file: any) => {
     // 不需要额外处理
   }
   
-  window.electronAPI.send('play-video', {
+  window.electronAPI.player.playMedia({
     name: file.name,
     path: playPath
     // 这里暂不传 startTime，首次播放从头开始，记忆进度由后端在播放过程中记录
@@ -351,20 +348,19 @@ const handleNasRemove = (id: string) => {
 
 // 处理 NAS 打开/挂载
 const handleNasOpen = async (id: string) => {
-  if (!window.electronAPI) return
+  if (!window.electronAPI?.nas) return
 
   try {
     const result = await new Promise<{ success: boolean; error?: string }>((resolve) => {
-      const handler = (data: { success: boolean; error?: string }) => {
-        window.electronAPI.removeListener('nas-open-share-result', handler)
+      const cleanup = window.electronAPI.nas.onOpenShareResult((data) => {
+        cleanup()
         resolve(data)
-      }
-      window.electronAPI.on('nas-open-share-result', handler)
-      window.electronAPI.send('nas-open-share', { connectionId: id })
+      })
+      window.electronAPI.nas.openShare({ connectionId: id })
       
       // 超时处理
       setTimeout(() => {
-        window.electronAPI.removeListener('nas-open-share-result', handler)
+        cleanup()
         resolve({ success: false, error: '操作超时' })
       }, 5000)
     })
@@ -433,7 +429,7 @@ const handlePlayVideo = (video: MediaResource) => {
     }
   }
   
-  window.electronAPI.send('play-video', {
+  window.electronAPI.player.playMedia({
     name: video.name,
     path: playPath
     // 同上，起播时间默认为 0，由后端记忆后续进度
@@ -469,7 +465,7 @@ const syncPlaylist = () => {
     name: resource.name,
     path: resource.path
   }))
-  window.electronAPI.send('set-playlist', items)
+  window.electronAPI.player.setPlaylist(items)
 }
 
 // 处理文件选择
@@ -566,39 +562,33 @@ const handleNasConnectionScanned = (data: { id: string; resources: any[] }) => {
 onMounted(() => {
   if (window.electronAPI) {
     // 初始化挂载路径
-    initMountPaths()
+    ipcCleanups.push(initMountPaths())
     
-    // 初始化 NAS 连接
-    initNasConnections()
-    
-    // 请求挂载路径列表
-    window.electronAPI.send('get-mount-paths')
+    // 初始化 NAS 连接并保存清理函数
+    ipcCleanups.push(initNasConnections())
     
     // 请求 NAS 连接列表
-    window.electronAPI.send('get-nas-connections')
+    window.electronAPI.nas.getConnections()
     
     // 监听文件选择
-    window.electronAPI.on('video-file-selected', handleVideoFileSelected)
+    ipcCleanups.push(window.electronAPI.fileSystem.onVideoFileSelected(handleVideoFileSelected))
     
     // 监听挂载路径相关事件
-    window.electronAPI.on('mount-path-added', handleMountPathAdded)
-    window.electronAPI.on('mount-path-scanned', handleMountPathScanned)
-    window.electronAPI.on('mount-paths-updated', (data: { mountPaths: any[] }) => {
-      mountPathsList.value = data.mountPaths
-    })
+    ipcCleanups.push(window.electronAPI.fileSystem.onMountPathAdded(handleMountPathAdded))
+    ipcCleanups.push(window.electronAPI.fileSystem.onMountPathScanned(handleMountPathScanned))
     
     // 监听 NAS 连接相关事件
-    window.electronAPI.on('nas-connection-added', handleNasConnectionAdded)
-    window.electronAPI.on('nas-connection-scanned', handleNasConnectionScanned)
-    window.electronAPI.on('nas-connections-updated', (data: { connections: any[] }) => {
+    ipcCleanups.push(window.electronAPI.nas.onConnectionAdded(handleNasConnectionAdded))
+    ipcCleanups.push(window.electronAPI.nas.onConnectionScanned(handleNasConnectionScanned))
+    ipcCleanups.push(window.electronAPI.nas.onConnectionsUpdated((data) => {
       nasConnectionsList.value = data.connections
-    })
+    }))
     
     // 获取现有播放列表
-    window.electronAPI.send('get-playlist')
+    window.electronAPI.player.getPlaylist()
     
     // 监听播放列表更新
-    window.electronAPI.on('playlist-updated', (items: any[]) => {
+    ipcCleanups.push(window.electronAPI.player.onPlaylistUpdated((items: any[]) => {
       // 将播放列表项转换为资源（如果还没有）
       items.forEach(item => {
         const existing = resources.value.find(r => r.path === item.path)
@@ -616,19 +606,15 @@ onMounted(() => {
           addResource(resource)
         }
       })
-    })
+    }))
   }
 })
 
 onUnmounted(() => {
   if (window.electronAPI) {
-    window.electronAPI.removeListener('video-file-selected', handleVideoFileSelected)
-    window.electronAPI.removeListener('mount-path-added', handleMountPathAdded)
-    window.electronAPI.removeListener('mount-path-scanned', handleMountPathScanned)
-    window.electronAPI.removeListener('mount-paths-updated', () => {})
-    window.electronAPI.removeListener('nas-connection-added', handleNasConnectionAdded)
-    window.electronAPI.removeListener('nas-connection-scanned', handleNasConnectionScanned)
-    window.electronAPI.removeListener('nas-connections-updated', () => {})
+    // 清理所有 IPC 监听器
+    ipcCleanups.forEach(cleanup => cleanup())
+    ipcCleanups.length = 0
   }
 })
 </script>

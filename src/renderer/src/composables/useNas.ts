@@ -12,21 +12,20 @@ export function useNas() {
    * 测试 NAS 连接
    */
   const testConnection = async (config: NasConfig): Promise<{ success: boolean; error?: string }> => {
-    if (!window.electronAPI) {
+    if (!window.electronAPI?.nas) {
       return { success: false, error: '无法连接到主进程' }
     }
 
     return new Promise((resolve) => {
-      const handler = (data: { success: boolean; error?: string }) => {
-        window.electronAPI.removeListener('nas-test-connection-result', handler)
+      const cleanup = window.electronAPI.nas.onTestConnectionResult((data) => {
+        cleanup()
         resolve(data)
-      }
-      window.electronAPI.on('nas-test-connection-result', handler)
-      window.electronAPI.send('nas-test-connection', { config })
+      })
+      window.electronAPI.nas.testConnection({ config })
       
       // 超时处理
       setTimeout(() => {
-        window.electronAPI.removeListener('nas-test-connection-result', handler)
+        cleanup()
         resolve({ success: false, error: '连接测试超时' })
       }, 10000)
     })
@@ -36,26 +35,25 @@ export function useNas() {
    * 添加 NAS 连接
    */
   const addNasConnection = async (name: string, config: NasConfig): Promise<NasConnection | null> => {
-    if (!window.electronAPI) return null
+    if (!window.electronAPI?.nas) return null
 
     loading.value = true
     try {
       return new Promise((resolve) => {
-        const handler = (data: { connection: NasConnection }) => {
+        const cleanup = window.electronAPI.nas.onConnectionAdded((data) => {
           // 检查是否已存在
           if (!nasConnections.value.find(nc => nc.id === data.connection.id)) {
             nasConnections.value.push(data.connection)
           }
-          window.electronAPI.removeListener('nas-connection-added', handler)
+          cleanup()
           loading.value = false
           resolve(data.connection)
-        }
-        window.electronAPI.on('nas-connection-added', handler)
-        window.electronAPI.send('nas-add', { name, config })
+        })
+        window.electronAPI.nas.addConnection({ name, config })
         
         // 超时处理
         setTimeout(() => {
-          window.electronAPI.removeListener('nas-connection-added', handler)
+          cleanup()
           loading.value = false
           resolve(null)
         }, 30000) // 30秒超时
@@ -71,12 +69,12 @@ export function useNas() {
    * 移除 NAS 连接
    */
   const removeNasConnection = (id: string) => {
-    if (!window.electronAPI) return
+    if (!window.electronAPI?.nas) return
 
     const index = nasConnections.value.findIndex(nc => nc.id === id)
     if (index !== -1) {
       nasConnections.value.splice(index, 1)
-      window.electronAPI.send('nas-remove', { id })
+      window.electronAPI.nas.removeConnection(id)
     }
   }
 
@@ -84,7 +82,7 @@ export function useNas() {
    * 刷新扫描 NAS 连接
    */
   const refreshNasConnection = async (id: string): Promise<void> => {
-    if (!window.electronAPI) return
+    if (!window.electronAPI?.nas) return
 
     const nasConnection = nasConnections.value.find(nc => nc.id === id)
     if (!nasConnection) return
@@ -92,7 +90,7 @@ export function useNas() {
     loading.value = true
     try {
       return new Promise((resolve) => {
-        const handler = (data: { id: string; resources: any[]; status?: string; error?: string }) => {
+        const cleanup = window.electronAPI.nas.onConnectionScanned((data) => {
           if (data.id === id) {
             const index = nasConnections.value.findIndex(nc => nc.id === id)
             if (index !== -1) {
@@ -105,13 +103,12 @@ export function useNas() {
                 nasConnections.value[index].error = data.error
               }
             }
-            window.electronAPI.removeListener('nas-connection-scanned', handler)
+            cleanup()
             loading.value = false
             resolve()
           }
-        }
-        window.electronAPI.on('nas-connection-scanned', handler)
-        window.electronAPI.send('nas-refresh', { id })
+        })
+        window.electronAPI.nas.refreshConnection(id)
       })
     } catch (error) {
       console.error('刷新扫描失败:', error)
@@ -130,16 +127,17 @@ export function useNas() {
    * 初始化 NAS 连接列表（从主进程获取）
    */
   const initNasConnections = () => {
-    if (!window.electronAPI) return
+    if (!window.electronAPI?.nas) return () => {}
 
     // 请求 NAS 连接列表
-    window.electronAPI.send('get-nas-connections')
+    window.electronAPI.nas.getConnections()
     
     // 监听 NAS 连接列表更新
-    const handler = (data: { connections: NasConnection[] }) => {
+    const cleanup = window.electronAPI.nas.onConnectionsUpdated((data) => {
       nasConnections.value = data.connections
-    }
-    window.electronAPI.on('nas-connections-updated', handler)
+    })
+
+    return cleanup
   }
 
   return {
