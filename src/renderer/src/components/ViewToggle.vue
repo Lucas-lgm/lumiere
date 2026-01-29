@@ -22,7 +22,8 @@ interface Emits {
   (e: 'update:modelValue', value: ViewMode): void
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
+
 const emit = defineEmits<Emits>()
 
 const modes = [

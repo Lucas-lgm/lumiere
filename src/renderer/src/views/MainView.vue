@@ -44,7 +44,7 @@
         />
         <!-- NAS 文件浏览器 -->
         <NasFileBrowser
-          v-if="showNasFileBrowser"
+          v-if="showNasFileBrowser && selectedNasConnectionData"
           :nas-connection="selectedNasConnectionData"
           @file-play="handleNasFilePlay"
           @mount-share="handleNasFileBrowserMount"
@@ -123,7 +123,6 @@ const {
   stats,
   addResource,
   addResources,
-  removeResource,
   removeResourcesByMountPath,
   setFilter,
   setSearchQuery,
@@ -164,7 +163,7 @@ const contentTitle = computed(() => {
 })
 
 const contentSubtitle = computed(() => {
-  const { all, local, network, nas, mounted } = stats.value
+  const { all, local, network, mounted } = stats.value
   if (activeFilter.value === 'all') {
     return `共 ${all} 个资源${local > 0 || network > 0 || mounted > 0 ? `（${local > 0 ? `${local} 个本地文件` : ''}${local > 0 && network > 0 ? '，' : ''}${network > 0 ? `${network} 个网络资源` : ''}${(local > 0 || network > 0) && mounted > 0 ? '，' : ''}${mounted > 0 ? `${mounted} 个挂载路径` : ''}）` : ''}`
   }
@@ -442,7 +441,7 @@ const handlePlayVideo = (video: MediaResource) => {
 }
 
 // 处理右键菜单
-const handleContextMenu = (event: MouseEvent, video: MediaResource) => {
+const handleContextMenu = (_event: MouseEvent, video: MediaResource) => {
   // TODO: 实现右键菜单
   console.log('Context menu:', video)
 }

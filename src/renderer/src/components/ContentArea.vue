@@ -7,7 +7,7 @@
       :loading="loading"
       :empty-text="emptyText"
       @video-play="$emit('video-play', $event)"
-      @video-context-menu="$emit('video-context-menu', $event, $event[1])"
+      @video-context-menu="(e, v) => $emit('video-context-menu', e, v)"
     />
   </div>
 </template>

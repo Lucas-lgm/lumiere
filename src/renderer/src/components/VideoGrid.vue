@@ -17,7 +17,7 @@
       :video="video"
       :view-mode="viewMode"
       @play="$emit('video-play', $event)"
-      @context-menu="$emit('video-context-menu', $event, $event[1])"
+      @context-menu="(e, v) => $emit('video-context-menu', e, v)"
     />
   </div>
 </template>
