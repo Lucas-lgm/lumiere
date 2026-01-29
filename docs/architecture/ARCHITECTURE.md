@@ -7,9 +7,18 @@
 **mpv-player** is a high-performance desktop media player built on **Electron**, leveraging **libmpv** via a custom **Node Native Addon** (C++/Objective-C) to deliver cinema-grade rendering (HDR/Dolby Vision) on macOS and Windows.
 
 ### 1.1 Core Value Proposition
-- **Correct HDR Output**: Uses macOS `CAOpenGLLayer` with EDR (Extended Dynamic Range) support and PQ color space.
-- **Modern Tech Stack**: Vue 3 Composition API + TypeScript + Electron + Node-API.
-- **Robust Architecture**: Domain-Driven Design (DDD) principles with strict layering and state machine-driven logic.
+
+1.  **Cinema-Grade Visuals (Native Power)**
+    *   **True HDR/EDR**: Bypasses Electron's compositor via `CAOpenGLLayer` (macOS) to deliver bit-perfect Dolby Vision/HDR output.
+    *   **Hardware Efficiency**: Deep optimization for Apple Silicon (`videotoolbox`) and Windows, ensuring minimal CPU usage and maximum battery life.
+
+2.  **Fluid & Responsive UX (Hybrid Architecture)**
+    *   **Thread Isolation**: Video rendering runs on a dedicated high-priority native thread (`CVDisplayLink`), ensuring playback never stutters even if the UI is busy.
+    *   **Zero-Glitch Interaction**: A deterministic `State Machine` + `Task Scheduler` eliminates race conditions (e.g., rapid seeking, playlist switching) common in async media apps.
+
+3.  **Maintainable Scale (DDD & Types)**
+    *   **Strict Layering**: Clear separation between UI (Vue), Orchestration (App), and Core Logic (Domain), preventing "spaghetti code".
+    *   **Type Safety**: End-to-end TypeScript coverage from IPC to the C++ Native Addon boundary.
 
 ---
 
