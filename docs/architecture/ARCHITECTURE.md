@@ -405,6 +405,28 @@ graph TD
     style MP fill:#dfd,stroke:#333
 ```
 
+#### 5.3.1 Scheduling Strategy Details
+
+The scheduler employs a **State-Gated Serial Execution** strategy to ensure deterministic behavior in an asynchronous environment.
+
+1.  **Strict Serial Execution (Lock-Based)**
+    *   **Mechanism**: A mutex-like flag (`isProcessing`) ensures only *one* task is executed at a time.
+    *   **Goal**: Prevent race conditions where multiple async operations (e.g., `load` and `stop`) might interleave unpredictably.
+
+2.  **State Gating (Head-of-Line Blocking)**
+    *   **Mechanism**: Each task can define a `condition` predicate (e.g., `state => state.phase === 'IDLE'`).
+    *   **Behavior**: If the task at the head of the queue does not meet its condition, the **entire queue is blocked**. The scheduler does *not* skip to the next task.
+    *   **Goal**: Enforce temporal dependencies (e.g., "Seek" *must* wait for "Playing" state; it cannot run while "Loading").
+
+3.  **Reactive Re-evaluation**
+    *   **Trigger**: The scheduler listens to `PlayerStateMachine` state transitions.
+    *   **Action**: Whenever the state changes (or a task completes), the scheduler calls `tryProcessNext()` to check if the blocked head task can now proceed.
+
+4.  **Enqueue Strategies (Priority Management)**
+    *   `append` (Default): Add to the end of the queue. Used for standard commands (`play`, `pause`).
+    *   `replace`: Remove existing tasks of the same type, then add. Used for high-frequency operations like **seeking** (only the latest seek matters).
+    *   `clear_all`: Clear the entire queue before adding. Used for destructive operations like **loading a new file** (invalidates all pending actions).
+
 ---
 
 ## 6. Directory Structure Mapping
