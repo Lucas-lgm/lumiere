@@ -274,9 +274,7 @@ export class LibMPVController extends EventEmitter {
         // macOS: 使用 render API，把 libmpv 绑定到 Electron 的 NSView 上
         this.binding.attachView(this.instanceId, windowId)
         this.binding.setHdrMode(this.instanceId, this.hdrEnabled)
-        // 默认启用 JavaScript 驱动渲染模式
-        this.binding.setJsDrivenRenderMode(this.instanceId, false)
-        console.log('[libmpv] ✅ Enabled JavaScript-driven render mode by default')
+        // 默认使用 Native 驱动 (CVDisplayLink)，无需启用 JS 驱动模式
       } else if (process.platform === 'win32') {
         // Windows: 使用 wid 嵌入方式
         // 注意：wid 应该在初始化前设置，但如果已经在 initialize 中设置过，这里可以跳过
