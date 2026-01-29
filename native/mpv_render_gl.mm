@@ -243,15 +243,6 @@ static bool check_dolby_vision_track(mpv_handle *mpv);
         return displayScheduled && needRedraw;
     }
     
-    // 渲染节流：检查是否距离上次渲染时间太短
-    uint64_t nowMs = (uint64_t)(CACurrentMediaTime() * 1000.0);
-    uint64_t lastRenderMs = rc->lastRenderTimeMs.load();
-    uint64_t minIntervalMs = calculateMinRenderInterval(rc);
-    
-    if (lastRenderMs > 0 && (nowMs - lastRenderMs) < minIntervalMs) {
-        return NO; // 跳过本次渲染
-    }
-    
     return rc->needRedraw.load();
 }
 
@@ -294,16 +285,8 @@ static bool check_dolby_vision_track(mpv_handle *mpv);
         return;
     }
 
-    // 渲染节流：避免过度渲染阻塞主线程
+    // 记录渲染时间
     uint64_t nowMs = (uint64_t)(CACurrentMediaTime() * 1000.0);
-    uint64_t lastRenderMs = rc->lastRenderTimeMs.load();
-    uint64_t minIntervalMs = calculateMinRenderInterval(rc);
-    
-    if (lastRenderMs > 0 && (nowMs - lastRenderMs) < minIntervalMs) {
-        // 渲染太频繁，跳过本次渲染，让 RunLoop 处理其他事件（如 Electron UI）
-        glFlush();
-        return;
-    }
     rc->lastRenderTimeMs.store(nowMs);
 
     // HDR 更新和视频帧率更新：延迟到 RunLoop 的下一个周期，避免阻塞当前渲染
@@ -466,27 +449,6 @@ static CALayer *get_render_layer(GLRenderContext *rc) {
     if (!rc || !rc->view) return nil;
     if (rc->glLayer) return rc->glLayer;
     return rc->view.layer;
-}
-
-/**
- * 计算最小渲染间隔（毫秒）
- * 根据视频帧率动态计算，避免过度渲染
- * @param rc 渲染上下文
- * @return 最小渲染间隔（毫秒）
- */
-static uint64_t calculateMinRenderInterval(GLRenderContext *rc) {
-    if (!rc) return GLRenderContext::DEFAULT_MIN_RENDER_INTERVAL_MS;
-    
-    double fps = rc->videoFps.load();
-    uint64_t minIntervalMs = GLRenderContext::DEFAULT_MIN_RENDER_INTERVAL_MS;
-    
-    if (fps > 0.1) {
-        // 根据视频帧率计算：1000ms / fps，但至少 8ms（120fps），最多 33ms（30fps）
-        uint64_t calculatedMs = (uint64_t)(1000.0 / fps);
-        minIntervalMs = std::max(8ULL, std::min(calculatedMs, 33ULL));
-    }
-    
-    return minIntervalMs;
 }
 
 /**
@@ -1113,16 +1075,12 @@ static CVReturn DisplayLinkCallback(CVDisplayLinkRef displayLink,
             return kCVReturnSuccess;
         }
         
-        // CVDisplayLink 驱动模式：检查是否需要渲染
-        // 渲染节流：检查是否距离上次渲染时间太短
-        uint64_t nowMs = (uint64_t)(CACurrentMediaTime() * 1000.0);
-        uint64_t lastRenderMs = rc->lastRenderTimeMs.load();
-        uint64_t minIntervalMs = calculateMinRenderInterval(rc);
-        
+        // CVDisplayLink 驱动模式：
+        // 只要 mpv 标记需要重绘 (needRedraw)，就触发渲染请求。
+        // mpv_request_render 会调度主线程更新 layer，进而触发 drawInCGLContext。
+        // 不需要在这里进行节流，依靠 CVDisplayLink 的频率 (VSync) 和 mpv 自身的时钟即可。
         bool needRedraw = rc->needRedraw.load();
-        bool shouldRender = needRedraw && 
-                           (lastRenderMs == 0 || (nowMs - lastRenderMs) >= minIntervalMs);
-        if (shouldRender) {
+        if (needRedraw) {
             mpv_request_render(rc->instanceId);
         }
     }
