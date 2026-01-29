@@ -108,7 +108,56 @@ flowchart TB
 
 ---
 
-## 3. Core Class Design (Class Diagram)
+## 3. Concurrency & Threading Model
+
+To ensure high performance and responsiveness, the application operates across multiple distinct execution contexts.
+
+```mermaid
+sequenceDiagram
+    participant UI as Electron Renderer (UI)
+    participant Main as Node.js Main (Logic)
+    participant Render as Native Render Thread
+    participant MPV as libmpv Core (Decoder)
+
+    Note over Render: High Priority (60/120Hz)
+    
+    par Parallel Execution
+        UI->>UI: Handle Mouse/Keyboard (100% CPU Time)
+        Main->>Main: Process State / IPC
+        Render->>Render: V-Sync Loop (CVDisplayLink)
+        MPV->>MPV: Decode Video Frames
+    end
+    
+    Note over Render, MPV: Critical Path: Zero blocking of Main/UI
+```
+
+### 3.1 Thread Isolation Strategy
+*   **Electron Main Thread**: Handles business logic, state management, and orchestration. It is **never blocked** by video rendering.
+*   **Native Render Thread**:
+    *   **macOS**: Uses `CVDisplayLink` to drive OpenGL rendering at the precise screen refresh rate.
+    *   **Windows**: Uses a dedicated render loop thread.
+    *   **Isolation**: This thread operates completely independently of the Node.js event loop. Even if the Main Process is busy (e.g., garbage collection), video playback remains smooth.
+*   **MPV Internal Threads**: Handle heavy lifting like video decoding (ffmpeg), filtering, and stream networking.
+
+### 3.2 Process Isolation (Why UI never lags)
+A common concern is whether high-framerate video rendering (e.g., 4K 120fps) affects the Vue.js UI responsiveness. The answer is **NO**, due to strict **Process Isolation**:
+
+1.  **Renderer Process (UI)**:
+    *   Runs the Vue.js application, DOM, and CSS.
+    *   Handles mouse/keyboard events independently.
+    *   **Benefit**: Even if the video engine crashes or stalls, the UI remains responsive.
+
+2.  **Main Process (Video)**:
+    *   Hosts the `libmpv` instance and the Native Render Thread.
+    *   Video frames are drawn to a hardware-accelerated `CAOpenGLLayer`.
+
+3.  **OS-Level Composition**:
+    *   The OS Window Server (Quartz on macOS) composites the **UI Layer** and **Video Layer** on the GPU.
+    *   They are physically separate layers (like Photoshop layers). The UI thread does not need to "wait" for the video frame to draw.
+
+---
+
+## 4. Core Class Design (Class Diagram)
 
 This diagram details the static structure and relationships between the main classes.
 
