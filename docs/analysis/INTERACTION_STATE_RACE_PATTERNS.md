@@ -158,6 +158,31 @@ const handlePlayerState = (state: PlayerState) => {
 
 这样，**模式一就从“针对某个字段的临时写法”，升级成了一个可以复用在任意标量可调值上的通用模式**。
 
+---
+
+### 3.4 进度条（Seek）交互策略：点击 vs 拖动
+
+- 控件事件绑定
+  - 拖动开始：`@mousedown` / `@touchstart` → 标记 `isScrubbing = true`
+  - 拖动过程：`@input` → 若 `isScrubbing === true`，调用 `onUserInput(value)` 仅更新本地 UI
+  - 松手结束：`@change` → 调用 `onUserCommit(value)` 发送 `control-seek`
+  - 点击跳转：若 `@input` 触发时 `isScrubbing === false`（未进入拖动），将其视为“点击行为”，直接 `onUserCommit(value)` 发送 `control-seek`
+
+- 命令发送与边界
+  - 发送前在渲染进程进行边界截断：`target = clamp(value, 0, duration)`，避免非法值被主进程拒绝
+  - 命令通道直达：renderer → ipcMain → App.seek → CorePlayer.seek → MpvMediaPlayer.seek → libmpv `time-pos`
+
+- 状态合并与同步
+  - `isScrubbing === true` 期间忽略后端状态回写（避免拖动过程被抢回）
+  - seek 完成后（`isSeeking: true → false`），前端调用 `reset(currentTime)` 以对齐到后端最终位置
+  - 进度条默认使用 200ms 保护期；点击与拖动都不依赖特殊的“值等价判定”，保持实现简单
+
+- 设计权衡
+  - 将“点击行为”复用到 `@input` 路径，避免依赖控件对 `@mousedown` 的一致分发（某些场景下，点击可能未命中外层事件）
+  - 拖动与点击在一个入口汇合，逻辑更清晰：是否处于 `isScrubbing` 决定走“本地预览”还是“立即提交”
+
+---
+
 #### 3.3 特性与权衡
 
 - **优点**

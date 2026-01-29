@@ -772,7 +772,9 @@ export class LibMPVController extends EventEmitter {
           }
         }
 
-        logger.debug(line)
+        if (level !== 'v') {
+          logger.debug(line)
+        }
         break
       }
       case MPV_EVENT_PROPERTY_CHANGE: {

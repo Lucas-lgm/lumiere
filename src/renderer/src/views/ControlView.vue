@@ -123,6 +123,8 @@
                 :step="1"
                 :show-tooltip="true"
                 :format-tooltip="formatVolumeTooltip"
+                @mousedown="onVolumeSeekStart"
+                @touchstart.prevent="onVolumeSeekStart"
                 @input="onVolumeInput"
                 @change="onVolumeChangeEnd"
               />
@@ -150,7 +152,10 @@ const currentTimeAdjustable = useAdjustableValue<number>({
   sendOnInput: false,
   sendCommand: (t: number) => {
     if (window.electronAPI) {
-      window.electronAPI.send('control-seek', t)
+      const dur = typeof duration.value === 'number' ? duration.value : 0
+      const target = dur > 0 ? Math.max(0, Math.min(dur, t)) : t
+      console.log('[ControlView] send control-seek', { target, raw: t, duration: dur })
+      window.electronAPI.send('control-seek', target)
     }
   }
 })
@@ -162,6 +167,7 @@ const isSeeking = ref(false)
 const isNetworkBuffering = ref(false)
 const networkBufferingPercent = ref<number | null>(null)
 const isScrubbing = ref(false)
+const isVolumeScrubbing = ref(false)
 const playerError = ref<string | null>(null)
 
 const isSwitchingVideo = ref(false)
@@ -256,6 +262,9 @@ const handlePlayVideo = (file: { name: string; path: string }) => {
 
 const handlePlayerState = (status: PlayerStatusSnapshot) => {
   console.log('status:', status)
+
+  // 简化逻辑：不再进行 isAdjusting 与 UI 交互状态的自我纠正
+
   const wasSeeking = isSeeking.value
   
   // 更新切换状态（由后端管理）
@@ -420,21 +429,26 @@ const stop = () => {
 // 控制栏显示/隐藏逻辑已移至 useControlBarAutoHide composable
 
 const onSeekStart = () => {
+  console.log('[ControlView] onSeekStart')
   isScrubbing.value = true
   onUserInteraction()
 }
 
 const onSeek = (value: number) => {
-  // 防止 Element Plus 在接收 model-value 更新时反向触发 input 事件导致的死循环
-  // 只有在明确的拖动状态下（mousedown）才接受 seek 输入
   if (!isScrubbing.value) {
-    return
+    // 视为“点击跳转”：直接提交而不是忽略
+    console.log('[ControlView] onSeek click commit (not scrubbing)', value)
+    onUserInteraction()
+    currentTimeAdjustable.onUserCommit(value)
+  } else {
+    console.log('[ControlView] onSeek input (scrubbing)', value)
+    currentTimeAdjustable.onUserInput(value)
+    onUserInteraction()
   }
-  currentTimeAdjustable.onUserInput(value)
-  onUserInteraction()
 }
 
 const onSeekEnd = (value: number) => {
+  console.log('[ControlView] onSeekEnd commit', value)
   onUserInteraction()
   // 使用可调值模式提交最终进度（发送 seek 命令）
   currentTimeAdjustable.onUserCommit(value)
@@ -443,7 +457,14 @@ const onSeekEnd = (value: number) => {
 }
 
 // 音量滑块（Element Plus）
+const onVolumeSeekStart = () => {
+  isVolumeScrubbing.value = true
+  onUserInteraction()
+}
+
 const onVolumeInput = (value: number) => {
+  // 移除 !isVolumeScrubbing 检查，确保点击操作也能生效
+  // Element Plus 的 slider 在点击时会触发 input，此时可能尚未触发 mousedown
   onUserInteraction()
   volumeAdjustable.onUserInput(Math.round(value))
 }
@@ -451,6 +472,7 @@ const onVolumeInput = (value: number) => {
 const onVolumeChangeEnd = (value: number) => {
   onUserInteraction()
   volumeAdjustable.onUserCommit(Math.round(value))
+  isVolumeScrubbing.value = false
 }
 
 const formatVolumeTooltip = (value: number): string => {

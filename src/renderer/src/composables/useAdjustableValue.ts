@@ -24,6 +24,10 @@ export interface AdjustableValue<T> {
   applyServerState: (serverValue: T) => void
   /** 用于在初始化或重置时对齐到后端值（不会触发保护期） */
   reset: (serverValue: T) => void
+  /** 是否处于调整中状态 */
+  isAdjusting: boolean
+  /** 强制结束调整状态（用于外部状态纠正） */
+  forceEndAdjusting: () => void
 }
 
 /**

@@ -374,12 +374,13 @@ class CorePlayerImpl extends EventEmitter implements CorePlayer {
   }
 
   async seek(time: number): Promise<void> {
+    const safeTime = Math.max(0, time)
     return this.scheduler.schedule({
       type: 'seek',
       id: 'seek', // 相同 ID 的任务会被替换
-      meta: { time },
+      meta: { time: safeTime },
       execute: async () => {
-        await this.mediaPlayer.seek(time)
+        await this.mediaPlayer.seek(safeTime)
         const status = this.mediaPlayer.getStatus()
         if (status) {
           this.updateFromPlayerStatus(status)

@@ -4,6 +4,9 @@ import type { CorePlayer } from '../../core/corePlayer'
 import { createIpcHandler } from '../ipcErrorHandler'
 import { IPC_CHANNELS } from '../ipcConstants'
 import type { PlayVideoRequest } from '../ipcTypes'
+import { createLogger } from '../../../infrastructure/logging'
+
+const logger = createLogger('PlaybackHandlers')
 
 /**
  * 播放控制相关的 IPC handlers
@@ -60,6 +63,7 @@ export function setupPlaybackHandlers(videoPlayerApp: VideoPlayerApp, corePlayer
       if (typeof time !== 'number' || isNaN(time) || time < 0) {
         throw new Error(`Invalid seek time: ${time}`)
       }
+      logger.info('CONTROL_SEEK received', { time })
       await videoPlayerApp.seek(time)
     },
     undefined,

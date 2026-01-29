@@ -7,6 +7,9 @@ import type { MediaPlayer, PlayerStatus } from '../../application/core/MediaPlay
 import { Media } from '../../domain/models/Media'
 import { PlaybackSession, PlaybackStatus } from '../../domain/models/Playback'
 import { MpvAdapter } from './MpvAdapter'
+import { createLogger } from '../../infrastructure/logging'
+
+const logger = createLogger('MpvMediaPlayer')
 
 /**
  * MPV 实现的媒体播放器
@@ -221,9 +224,12 @@ export class MpvMediaPlayer extends EventEmitter implements MediaPlayer {
   async seek(time: number): Promise<void> {
     if (!this.controller) throw new Error('MPV controller not initialized')
     if (this.currentSession && !this.currentSession.canSeek) {
+      logger.warn('[MpvMediaPlayer] seek blocked: canSeek=false', { time })
       throw new Error('Cannot seek in current state')
     }
+    logger.info('[MpvMediaPlayer] seek request', { time })
     await this.controller.seek(time)
+    logger.info('[MpvMediaPlayer] seek command sent', { time })
   }
 
   /**
