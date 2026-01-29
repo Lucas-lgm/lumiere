@@ -37,10 +37,6 @@ export const IPC_CHANNELS = {
   VIDEO_TIME_UPDATE: 'video-time-update',
   VIDEO_ENDED: 'video-ended',
   
-  // 控制栏
-  CONTROL_BAR_MOUSE_MOVE: 'control-bar-mouse-move',
-  CONTROL_BAR_MOUSE_LEAVE: 'control-bar-mouse-leave',
-  
   // 挂载路径
   SELECT_MOUNT_PATH: 'select-mount-path',
   MOUNT_PATH_ADD: 'mount-path-add',

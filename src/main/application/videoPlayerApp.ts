@@ -651,27 +651,7 @@ export class VideoPlayerApp {
     }
   }
 
-  /** 控制栏显示（封装广播逻辑） */
-  showControlBar(): void {
-    const controlView = this.getControlView()
-    const controlWindow = this.getControlWindow()
-    if (process.platform === 'darwin' && controlView && !controlView.webContents.isDestroyed()) {
-      controlView.webContents.send('control-bar-show')
-    } else if (process.platform === 'win32' && controlWindow && !controlWindow.isDestroyed() && controlWindow.webContents) {
-      controlWindow.webContents.send('control-bar-show')
-    }
-  }
 
-  /** 控制栏计划隐藏（封装广播逻辑） */
-  scheduleHideControlBar(): void {
-    const controlView = this.getControlView()
-    const controlWindow = this.getControlWindow()
-    if (process.platform === 'darwin' && controlView && !controlView.webContents.isDestroyed()) {
-      controlView.webContents.send('control-bar-schedule-hide')
-    } else if (process.platform === 'win32' && controlWindow && !controlWindow.isDestroyed() && controlWindow.webContents) {
-      controlWindow.webContents.send('control-bar-schedule-hide')
-    }
-  }
 
   /** 转发视频时间更新到视频窗口（用于 renderer → main → video window 的转发） */
   /** 转发视频结束到视频窗口 */
@@ -947,8 +927,6 @@ export class VideoPlayerApp {
 
       // 注意：不设置 setIgnoreMouseEvents，让 BrowserView 正常接收鼠标事件
       // BrowserView 覆盖整个窗口，可以正常接收所有鼠标事件
-      // 设置控制栏自动隐藏（统一处理）
-      this.setupControlBarAutoHideForWebContents(view.webContents)
       
       return
     }
@@ -1152,9 +1130,6 @@ export class VideoPlayerApp {
       this.controlWindow = controlWindow
       this.controlView = null
 
-      // 设置控制栏自动隐藏（统一处理）
-      this.setupControlBarAutoHideForWebContents(controlWindow.webContents)
-
       // 启动窗口同步定时器（兜底）
       if (this.windowSyncTimer) {
         clearInterval(this.windowSyncTimer)
@@ -1177,43 +1152,7 @@ export class VideoPlayerApp {
     // 其他平台：暂时不创建单独的控制窗口（保持简单行为）
   }
 
-  /**
-   * 设置控制栏自动隐藏（统一处理，不区分平台）
-   * 通过注入 JavaScript 代码监听鼠标事件
-   */
-  private setupControlBarAutoHideForWebContents(webContents: Electron.WebContents) {
-    if (!webContents) return
-    
-    // 等待页面加载完成后注入鼠标事件监听代码
-    webContents.once('did-finish-load', () => {
-      webContents.executeJavaScript(`
-        (function() {
-          let mouseMoveTimer = null;
-          const MOUSE_MOVE_DELAY = ${UI_DELAYS.MOUSE_MOVE_DELAY_MS};
-          
-          // 监听整个窗口的鼠标移动
-          document.addEventListener('mousemove', () => {
-            if (mouseMoveTimer) {
-              clearTimeout(mouseMoveTimer);
-            }
-            mouseMoveTimer = setTimeout(() => {
-              window.electronAPI.send('control-bar-mouse-move');
-            }, MOUSE_MOVE_DELAY);
-          });
-          
-          document.addEventListener('mouseleave', () => {
-            if (mouseMoveTimer) {
-              clearTimeout(mouseMoveTimer);
-              mouseMoveTimer = null;
-            }
-            setTimeout(() => {
-              window.electronAPI.send('control-bar-mouse-leave');
-            }, ${UI_DELAYS.CONTROL_BAR_HIDE_DELAY_MS});
-          });
-        })();
-      `).catch(() => {})
-    })
-  }
+
 
   /** 注册 app 生命周期与进程信号监听（由 bootstrap 在 whenReady 之后调用） */
   registerAppListeners() {
