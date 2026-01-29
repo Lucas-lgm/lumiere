@@ -202,14 +202,20 @@ export class LibMPVController extends EventEmitter {
         // 忽略，某些版本可能不支持
       }
 
-      // 针对 Apple Silicon 启用硬件解码
-      if (process.arch === 'arm64' && process.platform === 'darwin') {
-        try {
+      // 启用硬件解码
+      try {
+        if (process.platform === 'darwin' && process.arch === 'arm64') {
+          // Apple Silicon: 显式指定 VideoToolbox 以确保使用媒体引擎
           await this.setOption('hwdec', 'videotoolbox')
           console.log('[libmpv] ✅ Enabled hardware decoding (VideoToolbox) for Apple Silicon')
-        } catch (error) {
-          console.warn('[libmpv] Failed to enable hardware decoding:', error)
+        } else {
+          // Windows / Intel Mac / Linux: 使用 auto-safe 自动选择最佳安全硬解方式
+          // Windows 通常会选择 d3d11va 或 nvdec
+          await this.setOption('hwdec', 'auto-safe')
+          console.log('[libmpv] ✅ Enabled hardware decoding (auto-safe)')
         }
+      } catch (error) {
+        console.warn('[libmpv] Failed to enable hardware decoding:', error)
       }
 
       // 优化响应速度的设置
