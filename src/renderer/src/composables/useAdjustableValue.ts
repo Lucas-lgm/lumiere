@@ -114,12 +114,19 @@ export function useAdjustableValue<T>(options: AdjustableValueOptions<T>): Adjus
     log('reset', { serverValue })
   }
 
+  const forceEndAdjusting = () => {
+    isAdjusting = false
+    log('forceEndAdjusting')
+  }
+
   return {
     value,
     onUserInput,
     onUserCommit,
     applyServerState,
-    reset
+    reset,
+    get isAdjusting() { return isAdjusting },
+    forceEndAdjusting
   }
 }
 

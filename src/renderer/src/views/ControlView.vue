@@ -177,6 +177,7 @@ const isSwitchingVideo = ref(false)
 interface PlaylistItem {
   name: string
   path: string
+  startTime?: number
 }
 
 const playlist = ref<PlaylistItem[]>([])
