@@ -322,45 +322,43 @@ The `PlaybackScheduler` solves the **Temporal Dependency** problem (e.g., "I wan
 *   **Event-Driven**: The scheduler subscribes to `PlayerStateMachine` state changes to re-evaluate blocked tasks immediately.
 
 ```mermaid
-sequenceDiagram
-    participant Client
-    participant Scheduler as PlaybackScheduler
-    participant Queue as TaskQueue
-    participant SM as PlayerStateMachine
-    participant Task
+graph TD
+    %% External Dependencies
+    Client([CorePlayer])
+    SM[PlayerStateMachine]
+    MP[MediaPlayer]
 
-    Client->>Scheduler: schedule(task, condition)
-    Scheduler->>Queue: add(task)
-    
-    rect rgb(240, 240, 240)
-    note right of Scheduler: 1. Try Process (Blocked)
-    Scheduler->>Queue: peek()
-    Queue-->>Scheduler: task
-    Scheduler->>SM: getState()
-    SM-->>Scheduler: current: IDLE
-    Scheduler->>Scheduler: condition(IDLE) == false
-    note right of Scheduler: Condition not met, wait.
+    subgraph Scheduler ["Playback Scheduler"]
+        direction TB
+        Queue[TaskQueue]
+        
+        subgraph Logic ["Scheduling Logic"]
+            Check{Condition<br/>Met?}
+            Wait[Blocked: Wait for State]
+        end
+        
+        Exec[Execute & Dequeue]
     end
 
-    note over SM: ... Time Passes (Loading) ...
-    SM->>Scheduler: emit('state', READY)
+    %% Data Flow
+    Client -->|1. schedule| Queue
+    Queue -->|2. peek| Check
+    
+    SM -.->|3. current state| Check
+    SM -.->|4. state change| Check
+    
+    Check -- No --> Wait
+    Wait -.->|retry| Check
+    
+    Check -- Yes --> Exec
+    Exec -->|5. call| MP
+    Exec -->|resolve| Client
+    Exec -->|6. try next| Check
 
-    rect rgb(240, 248, 255)
-    note right of Scheduler: 2. Retry Process (Success)
-    Scheduler->>Queue: peek()
-    Queue-->>Scheduler: task
-    Scheduler->>SM: getState()
-    SM-->>Scheduler: current: READY
-    Scheduler->>Scheduler: condition(READY) == true
-    
-    Scheduler->>Queue: processNext()
-    activate Task
-    Queue->>Task: execute()
-    Task-->>Queue: result
-    deactivate Task
-    end
-    
-    Scheduler-->>Client: resolve(result)
+    style Check fill:#f96,stroke:#333,stroke-width:2px
+    style Queue fill:#eee,stroke:#333
+    style SM fill:#ccf,stroke:#333
+    style MP fill:#dfd,stroke:#333
 ```
 
 ---
