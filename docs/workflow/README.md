@@ -9,25 +9,29 @@
 ```
 docs/workflow/
 ├── README.md                    # 本文件，工作流文档索引
+├── AGENTIC_WORKFLOW.md          # 🌟 Andrew Ng Agentic Workflow 核心指南
 ├── PLANNING_TEMPLATE.md         # 规划文档模板
 ├── PROMPT_TEMPLATES.md          # 提示词模板库
 ├── TRAE_CONFIG.md               # Trae 环境配置与使用指南
 ├── WORKFLOW_CHECKLIST.md        # 工作流检查清单
 ├── CHANGELOG.md                 # 工作流文档更新日志
 └── EXAMPLES.md                   # 实际使用示例
-```
 
 ## 🚀 快速开始
 
-1. **阅读核心规则**: 查看项目根目录的 `.cursorrules` 文件
-2. **选择模板**: 根据任务类型选择 `PROMPT_TEMPLATES.md` 中的模板
-3. **制定规划**: 使用 `PLANNING_TEMPLATE.md` 创建规划文档
-4. **执行检查**: 使用 `WORKFLOW_CHECKLIST.md` 确保流程完整
+1. **核心理念**: 阅读 `AGENTIC_WORKFLOW.md`，理解反思与迭代的工作模式
+2. **阅读规则**: 查看项目根目录的 `.cursorrules` 文件
+3. **选择模板**: 根据任务类型选择 `PROMPT_TEMPLATES.md` 中的模板
+4. **制定规划**: 使用 `PLANNING_TEMPLATE.md` 创建规划文档
+5. **执行检查**: 使用 `WORKFLOW_CHECKLIST.md` 确保流程完整
 
 ## 📖 文档说明
 
-### `.cursorrules`
-项目根目录的 Cursor 配置文件，定义 AI 行为规则。**这是最重要的文件**。
+### AGENTIC_WORKFLOW.md
+**核心文档**。定义了基于 Andrew Ng Agentic Workflow 的开发模式，包括规划、执行、反思 (Reflection) 和验证循环。
+
+### .cursorrules
+项目根目录的 Cursor 配置文件，定义 AI 行为规则。
 
 ### PLANNING_TEMPLATE.md
 标准化的规划文档模板，用于记录功能开发计划。
