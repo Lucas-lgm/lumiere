@@ -37,6 +37,7 @@ graph TB
         subgraph "Core Domain Layer"
             CP[CorePlayer]
             PSM[PlayerStateMachine]
+            Sched[PlaybackScheduler]
             Models[Media, Playlist, PlaybackSession]
         end
         
@@ -44,6 +45,7 @@ graph TB
             MMP[MpvMediaPlayer]
             Log[Logger]
             FS[FileSystemService]
+            TQ[TaskQueue]
         end
     end
 
@@ -160,6 +162,10 @@ classDiagram
     CorePlayerImpl ..|> CorePlayer : Implements
     CorePlayerImpl --> MediaPlayer : Uses
     CorePlayerImpl --> PlayerStateMachine : Updates
+    CorePlayerImpl --> PlaybackScheduler : Uses
+    
+    PlaybackScheduler --> TaskQueue : Uses
+    PlaybackScheduler --> PlayerStateMachine : Observes
     
     MpvMediaPlayer ..|> MediaPlayer : Implements
 ```
@@ -306,6 +312,56 @@ To solve the race conditions between "UI state" and "Backend status broadcasts",
 *   **Protection Window**: After a user commits a change (e.g., `seek`), the system ignores incoming backend status updates for a short period (default 1000ms for timeline, 200ms for volume) to allow the backend state to catch up.
 *   **Atomic Commits**: Seek operations are atomic; multiple `input` events during a click or drag update the local UI, but only the final `change` event (or a specific commit action) triggers the backend command, ensuring smooth interaction.
 *   **Defensive Correction**: If the UI state and backend state remain out of sync after the protection window, the system performs a forced sync to prevent "stuck" controls.
+
+### 5.3 Playback Scheduling (Async Task Management)
+
+The `PlaybackScheduler` solves the **Temporal Dependency** problem (e.g., "I want to seek, but I must wait for the video to be loaded first"). It acts as a smart buffer between the application logic and the core player.
+
+*   **Queue-Based**: Tasks are executed sequentially to prevent race conditions (e.g., `load` then `seek`).
+*   **State-Gated**: A task at the head of the queue only runs if its `condition(currentState)` returns true.
+*   **Event-Driven**: The scheduler subscribes to `PlayerStateMachine` state changes to re-evaluate blocked tasks immediately.
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Scheduler as PlaybackScheduler
+    participant Queue as TaskQueue
+    participant SM as PlayerStateMachine
+    participant Task
+
+    Client->>Scheduler: schedule(task, condition)
+    Scheduler->>Queue: add(task)
+    
+    rect rgb(240, 240, 240)
+    note right of Scheduler: 1. Try Process (Blocked)
+    Scheduler->>Queue: peek()
+    Queue-->>Scheduler: task
+    Scheduler->>SM: getState()
+    SM-->>Scheduler: current: IDLE
+    Scheduler->>Scheduler: condition(IDLE) == false
+    note right of Scheduler: Condition not met, wait.
+    end
+
+    note over SM: ... Time Passes (Loading) ...
+    SM->>Scheduler: emit('state', READY)
+
+    rect rgb(240, 248, 255)
+    note right of Scheduler: 2. Retry Process (Success)
+    Scheduler->>Queue: peek()
+    Queue-->>Scheduler: task
+    Scheduler->>SM: getState()
+    SM-->>Scheduler: current: READY
+    Scheduler->>Scheduler: condition(READY) == true
+    
+    Scheduler->>Queue: processNext()
+    activate Task
+    Queue->>Task: execute()
+    Task-->>Queue: result
+    deactivate Task
+    end
+    
+    Scheduler-->>Client: resolve(result)
+```
 
 ---
 
