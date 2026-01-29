@@ -168,33 +168,86 @@ interface MPVStatus {
 
 ## 🔌 IPC通信
 
-### IPC消息通道
+### 1. Player API (播放器控制)
+**命名空间**: `window.electronAPI.player`
 
-#### 渲染进程 → 主进程
+#### 方法调用
 ```typescript
-// Vue组件中发送消息
-window.electronAPI.send('play-video', { name: 'video.mp4', path: '/path/to/video.mp4' })
-window.electronAPI.send('control-pause')
-window.electronAPI.send('control-seek', 120)
-window.electronAPI.send('control-volume', 75)
-window.electronAPI.send('control-hdr', true)
-window.electronAPI.send('debug-hdr-status')
+// 播放控制
+window.electronAPI.player.playMedia({ 
+  name: 'video.mp4', 
+  path: '/path/to/video.mp4',
+  startTime: 0 
+})
+window.electronAPI.player.pause()
+window.electronAPI.player.resume()
+window.electronAPI.player.stop()
+window.electronAPI.player.seek(120)
+window.electronAPI.player.setVolume(75)
+window.electronAPI.player.toggleFullscreen()
+
+// 窗口控制
+window.electronAPI.player.windowAction('close')    // 或 'minimize', 'maximize'
+
+// 播放列表
+window.electronAPI.player.playNext()
+window.electronAPI.player.playPrev()
 ```
 
-#### 主进程 → 渲染进程
+#### 事件监听 (需处理清理函数)
 ```typescript
-// 渲染进程中接收消息
-window.electronAPI.on('player-status', (status) => {
-  console.log('播放器状态更新:', status)
+// 监听状态更新
+const cleanup = window.electronAPI.player.onStatus((status) => {
+  console.log('播放器状态:', status)
 })
 
-window.electronAPI.on('playlist-updated', (playlist) => {
-  console.log('播放列表更新:', playlist)
+// 组件卸载时清理
+onUnmounted(() => {
+  cleanup()
 })
 
-window.electronAPI.on('player-error', ({ message }) => {
-  console.error('播放错误:', message)
-})
+// 其他事件
+window.electronAPI.player.onCurrentVideoChanged((video) => { ... })
+window.electronAPI.player.onPlaylistUpdated((items) => { ... })
+```
+
+### 2. NAS API (网络存储)
+**命名空间**: `window.electronAPI.nas`
+
+#### 方法调用
+```typescript
+// 连接管理
+window.electronAPI.nas.getConnections()
+window.electronAPI.nas.addConnection({ name: 'MyNAS', config: { ... } })
+window.electronAPI.nas.testConnection({ config: { ... } })
+
+// 文件浏览
+window.electronAPI.nas.readDirectory({ connectionId: '...', path: '/' })
+```
+
+#### 事件监听
+```typescript
+window.electronAPI.nas.onConnectionsUpdated(({ connections }) => { ... })
+window.electronAPI.nas.onTestConnectionResult(({ success, error }) => { ... })
+```
+
+### 3. FileSystem API (本地文件)
+**命名空间**: `window.electronAPI.fileSystem`
+
+#### 方法调用
+```typescript
+// 文件选择
+window.electronAPI.fileSystem.selectVideoFile()
+
+// 挂载路径管理
+window.electronAPI.fileSystem.getMountPaths()
+window.electronAPI.fileSystem.addMountPath('D:/Movies')
+```
+
+#### 事件监听
+```typescript
+window.electronAPI.fileSystem.onVideoFileSelected(({ name, path }) => { ... })
+window.electronAPI.fileSystem.onMountPathsUpdated(({ mountPaths }) => { ... })
 ```
 
 ### 常用IPC消息

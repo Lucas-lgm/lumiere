@@ -54,7 +54,7 @@ graph TB
     end
 
     %% Communications
-    UI_Store <-->|IPC JSON| IPC_Server
+    UI_Store <-->|IPC APIs| IPC_Server
     IPC_Server --> VPA
     IPC_Server --> CP
     
@@ -75,7 +75,7 @@ graph TB
 | Layer | Module | Responsibility |
 | :--- | :--- | :--- |
 | **UI** | `src/renderer` | User interaction, strictly "dumb" components driven by state from Main. |
-| **Command** | `ipcHandlers` | **Router**. Decodes IPC messages and dispatches to Application Layer. No business logic. |
+| **Command** | `ipcHandlers` | **Router**. Exposes typed APIs (player, nas, fileSystem) and dispatches to Application Layer. |
 | **Application** | `VideoPlayerApp` | **Orchestrator**. Manages Windows, Playlist, Config, and high-level user intents. |
 | **Core** | `CorePlayer` | **Engine Facade**. Manages the lifecycle of the playback engine and state machine. |
 | **Infrastructure** | `MpvMediaPlayer` | **Adapter**. Translates generic `MediaPlayer` commands into `libmpv` C calls. |
@@ -199,7 +199,7 @@ sequenceDiagram
     participant MPV as MpvMediaPlayer
     participant Native as Native Addon
 
-    UI->>IPC: send('play-video', path)
+    UI->>IPC: player.playMedia(path)
     IPC->>App: handlePlayVideo(path)
     
     rect rgb(240, 248, 255)
@@ -223,7 +223,7 @@ sequenceDiagram
         MPV->>Core: emit('session-change')
         Core->>Core: StateMachine.update()
         Core->>App: emit('player-state')
-        App->>UI: broadcast('player-state')
+        App->>UI: broadcast('player-status')
     end
 ```
 
