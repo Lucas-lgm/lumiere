@@ -564,9 +564,7 @@ onUnmounted(() => {
   transition: background 0.3s ease;
 }
 
-.control-view.video-not-ready {
-  background: #1e1e24;
-}
+/* Removed .control-view.video-not-ready background to prevent blocking video window */
 
 .loading-overlay {
   position: absolute;
