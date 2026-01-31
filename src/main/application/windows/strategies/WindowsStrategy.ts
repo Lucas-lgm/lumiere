@@ -236,11 +236,20 @@ export class WindowsStrategy extends EventEmitter implements WindowController {
   toggleFullscreen(): void {
     if (!this.controlWindow) return
     
-    const isFullscreen = this.controlWindow.isFullScreen()
-    this.controlWindow.setFullScreen(!isFullscreen)
+    // Windows 平台下，子窗口的 isFullScreen() 属性不可靠，可能一直返回 false。
+    // 我们使用 lifecycle 状态机来判断当前是否全屏。
+    const isNativeFullscreen = this.controlWindow.isFullScreen()
+    const isLifecycleFullscreen = this.lifecycle.state === WindowState.FULLSCREEN
+    
+    logger.info(`toggleFullscreen called. Native: ${isNativeFullscreen}, Lifecycle: ${this.lifecycle.state}`)
+
+    // 优先使用 Lifecycle 状态，如果 Lifecycle 说是全屏，那我们就退出全屏
+    const targetFullscreen = !isLifecycleFullscreen
+
+    this.controlWindow.setFullScreen(targetFullscreen)
     // Synchronizer should handle VideoWindow size, 
     // but full screen state usually needs explicit set on both or just the parent
-    this.videoWindow?.setFullScreen(!isFullscreen)
+    this.videoWindow?.setFullScreen(targetFullscreen)
   }
 
   getInputWindow(): BrowserWindow | null {
