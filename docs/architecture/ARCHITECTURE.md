@@ -487,7 +487,44 @@ The scheduler employs a **State-Gated Serial Execution** strategy to ensure dete
 
 ---
 
-## 6. Directory Structure Mapping
+## 6. Window Management Strategy
+
+To resolve the conflict between MPV's opaque rendering requirements and modern transparent UI design, the application employs a **Dual-Window Composition Strategy** on Windows.
+
+> **Detailed Design**: See [WINDOW_COMPOSITION_STRATEGY.md](../design/WINDOW_COMPOSITION_STRATEGY.md)
+
+### 6.1 Dual-Window Architecture (Windows)
+
+```mermaid
+graph TD
+    subgraph Composition [Dual-Window Composition]
+        direction TB
+        CW["ControlWindow (Top)"]:::ui
+        VW["VideoWindow (Bottom)"]:::video
+    end
+
+    User[User Input] --> CW
+    CW -- "Sync Bounds" --> WS[WindowSynchronizer]
+    WS -- "Apply Bounds" --> VW
+    
+    CW -- "Forward Input" --> IPC[InputMapper]
+    IPC -- "MPV Command" --> VW
+
+    classDef ui fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#0d47a1
+    classDef video fill:#263238,stroke:#000,stroke-width:2px,color:#fff
+```
+
+*   **VideoWindow (Bottom)**: Opaque, frameless, dedicated to MPV rendering via `wid` embedding. Ignores mouse events.
+*   **ControlWindow (Top)**: Transparent, frameless, hosts the Vue.js UI. Captures all user input and acts as the **Single Source of Truth** for window state.
+
+### 6.2 Synchronization
+A `WindowSynchronizer` ensures the two windows move and resize in unison. It uses an **Event-Driven** approach with throttling to minimize IPC overhead, rather than a polling loop.
+
+### 6.3 Lifecycle & Fullscreen
+Window states (Visible, Fullscreen, Minimized) are managed by a **Finite State Machine (WindowLifecycle)** to prevent illegal transitions.
+*   **Fullscreen Logic**: Prioritizes the `ControlWindow`'s physical state. Includes a "Forced Reset" mechanism to handle Windows-specific edge cases where the window exits fullscreen mode but fails to restore its original dimensions.
+
+## 7. Directory Structure Mapping
 
 ```mermaid
 graph LR
@@ -509,9 +546,9 @@ graph LR
     infra --> rendering[rendering]
 ```
 
-## 7. Development Guidelines
+## 8. Development Guidelines
 
-### 7.1 Modifying Architecture
+### 8.1 Modifying Architecture
 *   **Strict Layering**: Never import `VideoPlayerApp` into `CorePlayer`. Dependencies point down.
 *   **Interface First**: If changing `CorePlayer` functionality, update the `MediaPlayer` interface first if it affects the contract.
 *   **Single Source of Truth**: Update this document before merging any architectural changes.
