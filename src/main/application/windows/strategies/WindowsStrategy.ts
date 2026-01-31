@@ -178,7 +178,7 @@ export class WindowsStrategy extends EventEmitter implements WindowController {
       this.controlWindow.loadURL(url).catch(() => {})
       // this.controlWindow.webContents.openDevTools({ mode: 'detach' })
     } else {
-      this.controlWindow.loadFile(join(__dirname, '../../../renderer/index.html'), {
+      this.controlWindow.loadFile(join(__dirname, '../renderer/index.html'), {
         hash: 'control'
       }).catch(() => {})
     }
@@ -247,8 +247,6 @@ export class WindowsStrategy extends EventEmitter implements WindowController {
     const targetFullscreen = !isLifecycleFullscreen
 
     this.controlWindow.setFullScreen(targetFullscreen)
-    // Synchronizer should handle VideoWindow size, 
-    // but full screen state usually needs explicit set on both or just the parent
     this.videoWindow?.setFullScreen(targetFullscreen)
   }
 

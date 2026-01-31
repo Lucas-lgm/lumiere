@@ -9,19 +9,6 @@ import { join } from 'path'
 
 const logger = createLogger('MacStrategy')
 
-/**
- * macOS Strategy: Single-Window + BrowserView
- * 
- * 专为 macOS 平台设计的窗口组合策略。
- * 
- * 架构：
- * - VideoWindow: 主窗口，负责 MPV 渲染。
- * - ControlView (BrowserView): 挂载在 VideoWindow 上的 Web 内容层。
- * 
- * 优势：
- * - 性能更好，无需双窗口同步。
- * - 原生支持 macOS 全屏体验（Spaces）。
- */
 export class MacStrategy extends EventEmitter implements WindowController {
   private videoWindow: BrowserWindow | null = null
   private controlView: BrowserView | null = null
@@ -93,7 +80,7 @@ export class MacStrategy extends EventEmitter implements WindowController {
         nodeIntegration: false,
         contextIsolation: true,
         backgroundThrottling: false,
-        preload: join(__dirname, '../../../preload/preload.js') // 注意路径层级
+        preload: join(__dirname, '../preload/preload.js') // 注意路径层级
       }
     })
 
@@ -155,7 +142,7 @@ export class MacStrategy extends EventEmitter implements WindowController {
       this.controlView.webContents.loadURL(url).catch(() => {})
       // this.controlView.webContents.openDevTools({ mode: 'detach' })
     } else {
-      this.controlView.webContents.loadFile(join(__dirname, '../../../renderer/index.html'), {
+      this.controlView.webContents.loadFile(join(__dirname, '../renderer/index.html'), {
         hash: 'control'
       }).catch(() => {})
     }
