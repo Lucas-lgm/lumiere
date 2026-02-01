@@ -264,7 +264,7 @@ export class LibMPVController extends EventEmitter {
   /**
    * 设置窗口 ID（用于嵌入到 Electron 窗口）
    */
-  async setWindowId(windowId: number): Promise<void> {
+  setWindowId(windowId: number) {
     if (this.instanceId === null) {
       throw new Error('MPV instance not initialized')
     }
@@ -272,6 +272,7 @@ export class LibMPVController extends EventEmitter {
     try {
       if (process.platform === 'darwin') {
         // macOS: 使用 render API，把 libmpv 绑定到 Electron 的 NSView 上
+        console.log('[libmpv] setWindowId:', windowId)
         this.binding.attachView(this.instanceId, windowId)
         this.binding.setHdrMode(this.instanceId, this.hdrEnabled)
         // 默认使用 Native 驱动 (CVDisplayLink)，无需启用 JS 驱动模式
@@ -776,9 +777,9 @@ export class LibMPVController extends EventEmitter {
           }
         }
 
-        if (level !== 'v') {
+        // if (level !== 'v') {
           logger.debug(line)
-        }
+        // }
         break
       }
       case MPV_EVENT_PROPERTY_CHANGE: {

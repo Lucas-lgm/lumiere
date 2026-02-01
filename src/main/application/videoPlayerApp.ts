@@ -437,6 +437,7 @@ export class VideoPlayerApp {
     await new Promise(resolve => setTimeout(resolve, VIDEO_PLAYER_DELAYS.VIDEO_WINDOW_SHOW_WAIT_MS))
 
     // 设置视频窗口（同时设置 MpvMediaPlayer 的 windowId）
+    console.log('[videoPlayerApp] setVideoWindow:', videoWindow)
     await this.corePlayer.setVideoWindow(videoWindow)
 
     // 初始化播放器、挂载窗口，供 RenderManager 使用

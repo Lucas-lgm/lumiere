@@ -119,6 +119,8 @@ class CorePlayerImpl extends EventEmitter implements CorePlayer {
       this.videoWindow.removeAllListeners('resize')
     }
     this.videoWindow = window
+
+    console.log('[CorePlayerImpl] setVideoWindow:', window)
     
     // 如果窗口已设置，同时为 MpvMediaPlayer 设置窗口 ID
     if (window && !window.isDestroyed()) {
@@ -207,13 +209,6 @@ class CorePlayerImpl extends EventEmitter implements CorePlayer {
     if (!windowId) return undefined
 
     try {
-      // 设置窗口 ID（MpvMediaPlayer 会在 play 时使用它来初始化播放器）
-      // 注意：这里需要类型检查，因为 MediaPlayer 接口没有 setWindowId 方法
-      // 这是 MPV 特定的，未来可以抽象到 MediaPlayer 接口
-      if (this.mediaPlayer instanceof MpvMediaPlayer) {
-        this.mediaPlayer.setWindowId(windowId)
-      }
-      
       // 更新 RenderManager 的 mediaPlayer 引用（如果已创建）
       if (this.renderManager) {
         this.renderManager.setMediaPlayer(this.mediaPlayer)
@@ -230,6 +225,10 @@ class CorePlayerImpl extends EventEmitter implements CorePlayer {
             error: error instanceof Error ? error.message : String(error)
           })
         }
+      }
+
+      if (this.mediaPlayer instanceof MpvMediaPlayer) {
+        this.mediaPlayer.setWindowId(windowId)
       }
       
       return windowId

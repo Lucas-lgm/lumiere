@@ -36,8 +36,9 @@ export class MpvMediaPlayer extends EventEmitter implements MediaPlayer {
     }
   }
 
-  setWindowId(windowId: number): void {
+  setWindowId(windowId: number) {
     this.windowId = windowId
+    this.controller.setWindowId(this.windowId)
   }
 
   async ensureReady(): Promise<void> {
@@ -47,15 +48,12 @@ export class MpvMediaPlayer extends EventEmitter implements MediaPlayer {
   private async ensureInitialized(): Promise<void> {
     if (this.isInitialized && this.controller) return
     if (!isLibMPVAvailable()) throw new Error('libmpv is not available')
-    if (!this.windowId) throw new Error('Window ID must be set before playing media. Call setWindowId() first.')
-
     this.controller = new LibMPVController()
     if (process.platform === 'win32') {
       await this.controller.initialize(this.windowId)
     } else {
       await this.controller.initialize()
     }
-    await this.controller.setWindowId(this.windowId)
     this.setupEventHandlers()
     this.isInitialized = true
   }
@@ -440,6 +438,8 @@ export class MpvMediaPlayer extends EventEmitter implements MediaPlayer {
   }
 
   async cleanup(): Promise<void> {
+    console.log('[MpvMediaPlayer] cleanup')
+
     this.sessionChangeListeners.clear()
     this.statusChangeListeners.clear()
     this.fpsChangeListeners.clear()

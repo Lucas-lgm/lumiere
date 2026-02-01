@@ -268,12 +268,14 @@ Napi::Value AttachView(const Napi::CallbackInfo& info) {
     
 #ifdef __APPLE__
     // macOS: 使用 render API，创建 GL 上下文
+    if (inst->glCtx) {
+        mpv_destroy_gl_context(id);
+        inst->glCtx = nullptr;
+    }
+    inst->glCtx = mpv_create_gl_context_for_view(id, (void*)viewPtr, inst->ctx);
     if (!inst->glCtx) {
-        inst->glCtx = mpv_create_gl_context_for_view(id, (void*)viewPtr, inst->ctx);
-        if (!inst->glCtx) {
-            Napi::Error::New(env, "Failed to create GL context for view").ThrowAsJavaScriptException();
-            return env.Null();
-        }
+        Napi::Error::New(env, "Failed to create GL context for view").ThrowAsJavaScriptException();
+        return env.Null();
     }
     mpv_set_force_black_mode(id, 1);
 #elif defined(_WIN32)
