@@ -40,11 +40,9 @@ function setupServicesMainWindow(mainWindow: BrowserWindow | undefined): void {
  */
 export function setupServices(videoPlayerApp: VideoPlayerApp): void {
   // 立即尝试设置主窗口（如果已创建）
-  const mainWindow = videoPlayerApp.windowManager.getWindow('main')
+  const mainWindow = videoPlayerApp.getMainWindow()
   setupServicesMainWindow(mainWindow)
-  
-  const windowManager = videoPlayerApp.windowManager
-  
+
   // 如果窗口还未创建，监听窗口创建事件
   if (!mainWindow) {
     // 使用轮询检查窗口是否已创建（临时方案，直到有更好的事件机制）
@@ -53,7 +51,7 @@ export function setupServices(videoPlayerApp: VideoPlayerApp): void {
     let retryCount = 0
     const checkWindow = setInterval(() => {
       retryCount++
-      const window = windowManager.getWindow('main')
+      const window = videoPlayerApp.getMainWindow()
       
       if (window) {
         clearInterval(checkWindow)

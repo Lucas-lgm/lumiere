@@ -1,7 +1,7 @@
 import { app, BrowserWindow, BrowserView, screen } from 'electron'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { join } from 'path'
-import { WindowManager } from './windows/windowManager'
+import { createAppWindow } from './windows/WindowCreator'
 import { WindowPool } from './windows/WindowPool'
 import { WindowController } from './windows/WindowController'
 import { WindowStrategyFactory } from './windows/WindowStrategyFactory'
@@ -127,12 +127,12 @@ class ConfigManager {
 }
 
 export class VideoPlayerApp {
-  readonly windowManager: WindowManager
   readonly playlist: Playlist
   readonly config: ConfigManager
   
   // 新的窗口控制器（替代原有的 loose controlWindow/controlView）
   private windowController: WindowController | null = null
+  private mainWindow: BrowserWindow | null = null
   
   private isQuitting: boolean = false
   private lastPlayerPhase: string = 'idle'
@@ -199,7 +199,6 @@ export class VideoPlayerApp {
   }
 
   constructor(private readonly corePlayer: CorePlayer) {
-    this.windowManager = new WindowManager()
     this.config = new ConfigManager()
     this.playlist = new Playlist()
     this.corePlayer.onPlayerStatus(this.onEndedPlayNext)
@@ -315,6 +314,10 @@ export class VideoPlayerApp {
     }
   }
 
+  getMainWindow(): BrowserWindow | undefined {
+    return this.mainWindow ?? undefined
+  }
+
 
   getList(): PlaylistItem[] {
     return this.playlist.getAll().map((e) => ({
@@ -385,9 +388,8 @@ export class VideoPlayerApp {
     this.corePlayer.resetStatus()
 
     // UI 层职责：窗口管理
-    const mainWindow = this.windowManager.getWindow('main')
-    if (mainWindow && mainWindow.isVisible()) {
-      mainWindow.hide()
+    if (this.mainWindow && this.mainWindow.isVisible()) {
+      this.mainWindow.hide()
     }
 
     // 初始化/获取 WindowController (Strategy)
@@ -546,9 +548,9 @@ export class VideoPlayerApp {
 
   /** 处理文件选择结果：广播到主窗口 */
   handleFileSelected(file: { name: string; path: string }): void {
-    const mainWindow = this.windowManager.getWindow('main')
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('video-file-selected', file)
+    const mw = this.mainWindow
+    if (mw && !mw.isDestroyed()) {
+      mw.webContents.send('video-file-selected', file)
     }
   }
 
@@ -582,7 +584,7 @@ export class VideoPlayerApp {
       }
 
       // 恢复主窗口
-      const mainWindow = this.windowManager.getWindow('main')
+      const mainWindow = this.mainWindow
       if (!mainWindow || mainWindow.isDestroyed()) {
         this.createMainWindow()
       } else {
@@ -594,13 +596,13 @@ export class VideoPlayerApp {
   }
 
   createMainWindow() {
-    const mainWindow = this.windowManager.createWindow({
-      id: 'main',
+    const mainWindow = createAppWindow({
       width: 1200,
       height: 800,
       title: '视频播放器 - 视频列表',
       route: '#/'
     })
+    this.mainWindow = mainWindow
 
     // 监听主窗口关闭事件（使用 once 确保只触发一次）
     mainWindow.once('close', async (event) => {

@@ -1,5 +1,21 @@
 # Window Composition & Management Strategy
 
+## TL;DR
+- Windows uses dual windows: ControlWindow as the single source of truth; VideoWindow renders MPV only
+- One-way sync: ControlWindow -> WindowSynchronizer -> VideoWindow; throttle ~16ms during drag/resize, final align ~200ms
+- Fullscreen/maximize are driven by ControlWindow; on exit, check for screen-sized residual bounds and force reset if needed
+- Input: keyboard via InputMapper to CorePlayer; mouse handled by Vue; double-click on video area toggles fullscreen
+- macOS uses single window + BrowserView; same principle: UI is the source of truth, render layer follows
+- Key classes: WindowController (MacStrategy/WindowsStrategy), WindowSynchronizer, WindowPool
+
+```mermaid
+graph TD
+    CW["ControlWindow (Top, SSOT)"] --> WS[WindowSynchronizer]
+    WS --> VW["VideoWindow (Bottom, MPV)"]
+    CW --> IM[InputMapper]
+    IM --> MPV[CorePlayer/libmpv]
+```
+
 ## 1. Overview
 This document outlines the window composition strategy for `mpv-electron` on Windows, specifically the "Dual-Window" architecture designed to solve the MPV rendering overlay issue.
 
@@ -8,7 +24,7 @@ This document outlines the window composition strategy for `mpv-electron` on Win
 - **Modern UI**: Requires transparency, rounded corners, and HTML/CSS overlays.
 - **Conflict**: A single Electron window cannot reliably support both high-performance video rendering (opaque) and modern web UI (transparent) simultaneously without visual artifacts (black background flashing, occlusion).
 
-### The Solution: Dual-Window Composition
+### Solution: Dual-Window Composition (Windows)
 We use two separate `BrowserWindow` instances coordinated to act as one:
 
 ```mermaid
@@ -43,7 +59,7 @@ graph TD
 
 ---
 
-## 2. Core Principles
+## 2. Core Principles (Concise)
 
 ### 2.1 ControlWindow as Source of Truth
 All window state changes MUST originate from or be reflected immediately on the `ControlWindow`. The `VideoWindow` is a "slave" that passively follows.
@@ -53,37 +69,11 @@ All window state changes MUST originate from or be reflected immediately on the 
 - **Maximize**: `ControlWindow.maximize()` is the primary action.
 
 ### 2.2 Unidirectional Synchronization
-Synchronization flows STRICTLY from `ControlWindow` to `VideoWindow`.
-
-`ControlWindow (Master)  ==>  WindowSynchronizer  ==>  VideoWindow (Slave)`
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant CW as ControlWindow
-    participant WS as WindowSynchronizer
-    participant VW as VideoWindow
-
-    User->>CW: Drag / Resize
-    CW->>CW: Update Bounds (Immediate)
-    
-    par Event Stream
-        CW->>WS: 'move' / 'resize' event
-    and Throttle
-        WS->>WS: Throttle (16ms)
-    end
-    
-    WS->>WS: Check Safety Locks
-    alt Safe to Sync
-        WS->>VW: setBounds(newBounds)
-    else Unsafe (e.g. Fullscreen Transition)
-        WS->>WS: Skip / Wait
-    end
-```
+ControlWindow is the master. WindowSynchronizer applies bounds to VideoWindow with throttling and safety checks.
 
 ---
 
-## 3. Synchronization Strategy
+## 3. Synchronization Strategy (Practical Rules)
 
 ### 3.1 Event-Driven Sync
 Instead of a high-frequency polling loop (which wastes CPU), we rely on Electron's window events:
@@ -94,26 +84,15 @@ Instead of a high-frequency polling loop (which wastes CPU), we rely on Electron
 
 ### 3.2 Throttling
 To prevent "stuttering" or excessive IPC calls during rapid dragging:
-- **Throttled Sync**: Updates are capped (e.g., every 16ms or 33ms) during continuous events like `move` or `resize`.
-- **Debounced Final Sync**: A final precise sync is triggered ~200ms after the last event to ensure pixel-perfect alignment.
+- **Throttled Sync**: Updates are capped at ~16ms (60fps) during continuous `move`/`resize`.
+- **Heartbeat Correction**: A low-frequency heartbeat (~2000ms) applies a corrective sync to handle missed events.
 
-### 3.3 Safety Locks (The "Fullscreen Paradox")
-A critical edge case exists during Fullscreen transitions:
-1.  **Enter Fullscreen**: Both windows enter fullscreen. Sync is PAUSED to avoid fighting with the OS window manager.
-2.  **Exit Fullscreen**:
-    *   Electron sets `isFullScreen = false`.
-    *   *However*, the window bounds might still be 1920x1080 (screen size) for a few milliseconds during the animation.
-    *   **Risk**: If `WindowSynchronizer` reads these "large bounds" and applies them, it might lock the window in a pseudo-fullscreen state.
-    *   **Solution**: `WindowSynchronizer` MUST check:
-        ```typescript
-        if (!isFullScreen && currentBounds == ScreenSize) {
-            WAIT(); // Do not sync yet, wait for restore animation to finish
-        }
-        ```
+### 3.3 Safety Locks (Fullscreen Paradox)
+- On exit: if not fullscreen but bounds equal screen size, defer sync until restore animation completes
 
 ---
 
-## 4. Fullscreen Strategy
+## 4. Fullscreen Strategy (Deterministic)
 
 ### 4.1 Lifecycle Management (FSM)
 We use a Finite State Machine (`WindowLifecycle`) to track logical state, decoupling it from the physical window state.
@@ -129,42 +108,12 @@ States: `VISIBLE` <-> `FULLSCREEN`
         *   If *either* is TRUE -> **EXIT Sequence**.
         *   If *both* are FALSE -> **ENTER Sequence**.
 
-### 4.3 The "Exit Force Correction"
-Electron's `setFullScreen(false)` is sometimes unreliable on Windows (window may exit fullscreen mode but retain fullscreen dimensions).
-
-**Robust Exit Sequence**:
-1.  `ControlWindow.setFullScreen(false)`
-2.  `VideoWindow.setFullScreen(false)`
-3.  **Lifecycle Check**: If lifecycle remains `FULLSCREEN` after 200ms, force transition to `VISIBLE`.
-4.  **Layout Reset (Safety Net)**:
-    *   Wait 100ms.
-    *   Check `ControlWindow` bounds.
-    *   If bounds still equal Screen Size:
-        *   **FORCE RESET**: Manually set bounds to default (e.g., 1280x720, centered).
-        *   Log a warning ("Visual Restore failed, applying force reset").
-
-```mermaid
-flowchart TD
-    Start[User Clicks Fullscreen] --> Check{Is Physically<br/>Fullscreen?}
-    
-    Check -- Yes --> ExitSequence
-    Check -- No --> CheckLifecycle{Lifecycle ==<br/>FULLSCREEN?}
-    
-    CheckLifecycle -- Yes --> ExitSequence[**EXIT Sequence**<br/>Force Correction]
-    CheckLifecycle -- No --> EnterSequence[**ENTER Sequence**<br/>Normal Entry]
-    
-    subgraph Exit [Exit Logic]
-        ExitSequence --> SetFS_False[Set FullScreen = False]
-        SetFS_False --> Wait[Wait 100ms]
-        Wait --> CheckBounds{Bounds ==<br/>ScreenSize?}
-        CheckBounds -- Yes --> ForceReset[**Force Reset**<br/>Set 1280x720]
-        CheckBounds -- No --> Sync[Sync VideoWindow]
-    end
-```
+### 4.3 Exit Force Correction
+- If exit leaves screen-sized bounds, force reset to default (e.g., 1280x720, centered) after a short delay and log a warning
 
 ---
 
-## 5. Resize & Maximize Strategy
+## 5. Resize & Maximize
 
 ### 5.1 Maximize Toggle
 *   **Action**: User double-clicks header or clicks Maximize button.
@@ -180,7 +129,7 @@ flowchart TD
 
 ---
 
-## 6. Input Handling
+## 6. Input Handling (Summary)
 
 *   **Keyboard**: All keys captured by `ControlWindow`.
     *   `InputMapper`: Translates Electron `Accelerator` (e.g., `Space`, `ArrowUp`) to MPV commands.

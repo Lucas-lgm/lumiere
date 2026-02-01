@@ -19,7 +19,7 @@ export const VIDEO_PLAYER_DELAYS = {
  */
 export const WINDOW_DELAYS = {
   /** 窗口同步间隔（毫秒） */
-  SYNC_INTERVAL_MS: 100,
+  SYNC_INTERVAL_MS: 2000,
   /** 焦点设置延迟（毫秒） */
   FOCUS_DELAY_MS: 200,
   /** Resize 节流延迟（毫秒，约 60fps） */
@@ -35,4 +35,3 @@ export const UI_DELAYS = {
   /** 控制栏隐藏延迟（毫秒） */
   CONTROL_BAR_HIDE_DELAY_MS: 100,
 } as const
-

@@ -1,4 +1,68 @@
-# VideoPlayerApp 与 ApplicationService 职责重叠分析
+# Refactoring Plan: VideoPlayerApp vs ApplicationService (English Rewrite)
+
+## 1. Context & Current Architecture
+
+- VideoPlayerApp now directly owns the Main Window (`mainWindow`) and uses `WindowCreator.createAppWindow()` to create it.
+- Player windows are managed by `WindowController` (MacStrategy/WindowsStrategy) with pooling via `WindowPool`.
+- `WindowManager` has been removed to avoid overlapping responsibilities and reduce indirection.
+
+## 2. Problem Statement
+
+- Responsibility overlap: VideoPlayerApp mixes window orchestration with playback command routing.
+- Inconsistent invocation paths: some operations call `corePlayer` directly while others go through `ApplicationService`.
+- Playlist duplication risk: multiple owners across layers can cause sync issues.
+- Window creation logic coupled inside `play()`, reducing reuse and testability.
+
+## 3. Recommended Direction
+
+Prefer a unified command/query flow via `ApplicationService` while keeping window orchestration within `VideoPlayerApp`.
+
+- VideoPlayerApp:
+  - Owns Main Window lifecycle and UI orchestration
+  - Converts front-end PlaylistItem to domain `Media`
+  - Manages broadcast to UI (IPC) for player status and playlist updates
+- ApplicationService:
+  - Command and query router (CQRS)
+  - Playback control (play, pause, resume, seek, setVolume, stop)
+  - Provides typed interfaces consumed by IPC handlers
+- WindowController + WindowPool:
+  - Encapsulates platform-specific player window composition and resource pooling
+
+## 4. Action Plan (Phased)
+
+1) Extract window creation logic for the main window to `WindowCreator` (DONE)
+2) Keep player window logic in `WindowController` strategies + `WindowPool` (DONE)
+3) Route all playback control through `ApplicationService` (TO CONSIDER if needed)
+4) Ensure IPC handlers call `ApplicationService` for business logic; VideoPlayerApp triggers window orchestration and broadcasts (ONGOING PRACTICE)
+
+## 5. Sequence (High-Level)
+
+```mermaid
+sequenceDiagram
+    participant UI as Renderer (Vue)
+    participant IPC as IPC Handler
+    participant App as VideoPlayerApp
+    participant Core as CorePlayer
+    participant Win as WindowController/Pool
+
+    UI->>IPC: play-video(path)
+    IPC->>App: handlePlayVideo
+    App->>Win: init controller + acquire video window
+    App->>Core: setVideoWindow
+    App->>Core: play(Media)
+    Core->>App: emit player-status
+    App->>UI: broadcast status
+```
+
+## 6. Risks & Mitigations
+
+- Window composition complexity (Windows dual-window, fullscreen): mitigate via strategy encapsulation and lifecycle FSM.
+- Invocation path changes: cover via end-to-end testing through IPC routes.
+- Overcoupling of ApplicationService: keep player window orchestration in App, maintain testability of business logic.
+
+---
+
+# (Appendix) Original Analysis (Chinese, archived below)
 
 ## 1. 问题分析
 

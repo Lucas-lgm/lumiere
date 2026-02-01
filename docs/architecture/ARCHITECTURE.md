@@ -52,7 +52,8 @@ flowchart TB
         
         subgraph AppLayer ["Application Layer"]
             App_Orch["VideoPlayerApp<br/>(Orchestrator)"]:::app
-            App_Win[WindowManager]:::app
+            App_WCreator[WindowCreator]:::app
+            App_Main["MainWindow (BrowserWindow)"]:::app
             App_Config[ConfigManager]:::app
         end
 
@@ -80,7 +81,8 @@ flowchart TB
     UI_State <==>|JSON| IPC
     IPC ==>|Commands| App_Orch
     
-    App_Orch --> App_Win
+    App_Orch --> App_WCreator
+    App_Orch --> App_Main
     App_Orch --> App_Config
     App_Orch --> Core_Facade
 
@@ -168,10 +170,11 @@ classDiagram
     namespace Application {
         class VideoPlayerApp {
             -corePlayer: CorePlayer
-            -windowManager: WindowManager
+            -mainWindow: BrowserWindow
             -configManager: ConfigManager
             -playlist: Playlist
             +createMainWindow()
+            +getMainWindow()
             +handlePlayVideo(path)
         }
         
@@ -182,10 +185,28 @@ classDiagram
             +save()
         }
 
-        class WindowManager {
-            -windows: Map
-            +createWindow(config)
-            +getWindow(id)
+        class WindowCreator {
+            +createAppWindow(config)
+        }
+        
+        namespace Windows {
+            class WindowController {
+                <<Interface>>
+                +init(options)
+                +toggleFullscreen()
+                +handleWindowAction(action)
+                +getVideoWindow()
+                +getInputWindow()
+                +dispose()
+            }
+            class WindowStrategyFactory {
+                +create()
+            }
+            class WindowPool {
+                +init()
+                +acquire(type)
+                +release(window)
+            }
         }
         
         class Playlist {
@@ -253,7 +274,8 @@ classDiagram
 
     %% Relationships
     VideoPlayerApp --> CorePlayer : Owns
-    VideoPlayerApp --> WindowManager : Uses
+    VideoPlayerApp --> WindowCreator : Uses
+    VideoPlayerApp --> Windows.WindowController : Uses
     VideoPlayerApp --> ConfigManager : Uses
     VideoPlayerApp --> Playlist : Manages
     
@@ -286,8 +308,8 @@ flowchart TD
     CreateApp --> InitPlaylist[Playlist.init]
     
     Bootstrap --> CreateWin[VideoPlayerApp.createMainWindow]
-    CreateWin --> WM[WindowManager.createWindow]
-    WM --> ElectronWin[new BrowserWindow]
+    CreateWin --> WC[WindowCreator.createAppWindow]
+    WC --> ElectronWin[new BrowserWindow]
     
     Bootstrap --> ListenApp[registerAppListeners]
     ListenApp --> Ready[App Ready]
