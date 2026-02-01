@@ -24,26 +24,26 @@ export class MacStrategy extends EventEmitter implements WindowController {
     logger.info('Initializing Mac Strategy (Single-Window)...')
 
     try {
-      // 1. 获取 VideoWindow (从池中)
+      // Acquire VideoWindow from the pool
       this.videoWindow = WindowPool.getInstance().acquire('video')
       
-      // 设置 VideoWindow 初始状态
-      // macOS 上透明窗口也可以，或者设为黑色
+      // Initialize VideoWindow state
+      // Transparent window is fine on macOS; black is also acceptable
       this.videoWindow.setBackgroundColor('#00000000') 
       
-      // 2. 计算初始位置和大小
+      // Compute initial position and size
       const bounds = this.calculateInitialBounds(options)
       this.videoWindow.setBounds(bounds)
 
-      // 3. 创建并挂载 BrowserView
-      // BrowserView 不支持 Pool (因为绑定在 Window 上)，需要实时创建或复用
-      // 为了性能，我们可以缓存一个 View，或者每次新建（View 创建比 Window 快）
+      // Create and attach BrowserView
+      // BrowserView cannot be pooled (bound to a Window); create on demand or reuse
+      // For performance, cache a view or create new each time (view creation is faster than a Window)
       this.setupControlView()
 
-      // 4. 设置事件监听
+      // Set up event listeners
       this.setupEventListeners()
 
-      // 5. 显示窗口
+      // Show window
       if (!options.preload) {
         this.show()
       } else {
@@ -80,14 +80,14 @@ export class MacStrategy extends EventEmitter implements WindowController {
         nodeIntegration: false,
         contextIsolation: true,
         backgroundThrottling: false,
-        preload: join(__dirname, '../preload/preload.js') // 注意路径层级
+        preload: join(__dirname, '../preload/preload.js') // Ensure correct path depth
       }
     })
 
-    this.controlView.setBackgroundColor('#00000000') // 透明背景
+    this.controlView.setBackgroundColor('#00000000') // Transparent background
     this.videoWindow.setBrowserView(this.controlView)
     
-    // 自动调整大小
+    // Auto-resize
     this.controlView.setAutoResize({ width: true, height: true })
     const bounds = this.videoWindow.getContentBounds()
     this.controlView.setBounds({ x: 0, y: 0, width: bounds.width, height: bounds.height })
@@ -115,7 +115,7 @@ export class MacStrategy extends EventEmitter implements WindowController {
       this.emit('fullscreen-exit')
     })
 
-    // 转发键盘事件 (BrowserView)
+    // Forward keyboard events (BrowserView)
     if (this.controlView) {
       this.controlView.webContents.on('before-input-event', (event, input) => {
         const mpvKey = mapElectronInputToMpvKey(input)
@@ -149,9 +149,9 @@ export class MacStrategy extends EventEmitter implements WindowController {
   }
 
   setControlBarVisibility(visible: boolean): void {
-    // macOS 上 BrowserView 可以被移除或设为透明
-    // 但通常我们只需要前端隐藏 DOM 即可。
-    // 如果需要彻底隐藏（如纯净模式）：
+    // On macOS, BrowserView can be removed or made transparent
+    // Usually the front-end hides DOM elements
+    // If you need to hide completely (e.g., pure mode):
     if (this.videoWindow && this.controlView) {
       if (visible) {
         this.videoWindow.setBrowserView(this.controlView)
@@ -199,7 +199,7 @@ export class MacStrategy extends EventEmitter implements WindowController {
   }
 
   getInputWindow(): BrowserWindow | null {
-    // macOS 上 VideoWindow 就是 InputWindow (BrowserView 接收事件)
+    // On macOS, the VideoWindow is also the InputWindow (BrowserView receives events)
     return this.videoWindow
   }
 
@@ -208,7 +208,7 @@ export class MacStrategy extends EventEmitter implements WindowController {
   }
 
   resetLayout(): void {
-    // macOS 通常不需要手动 reset，AutoResize 会处理
+    // On macOS, manual reset is generally unnecessary; AutoResize handles it
     if (this.videoWindow && !this.videoWindow.isDestroyed()) {
         const { width, height } = screen.getPrimaryDisplay().workAreaSize
         const w = 1280
@@ -235,14 +235,14 @@ export class MacStrategy extends EventEmitter implements WindowController {
   dispose(): void {
     logger.info('Disposing MacStrategy resources')
     
-    // BrowserView 会随 Window 销毁，但如果是 Pool 的 Window，需要手动清理 View
+    // BrowserView is destroyed with the Window, but for pooled Windows, clear the view manually
     if (this.videoWindow && this.controlView) {
       try {
         this.videoWindow.setBrowserView(null)
-        // BrowserView 没有 destroy 方法，解除引用等待 GC，或 webContents.destroy()
+        // BrowserView has no destroy method; drop references and wait for GC, or use webContents.destroy()
         if (!this.controlView.webContents.isDestroyed()) {
              // (Optional) this.controlView.webContents.destroy() 
-             // 但这可能会导致 crash 如果 view 正在被使用
+             // This may crash if the view is in use
         }
       } catch (e) {}
       this.controlView = null
