@@ -188,31 +188,33 @@ classDiagram
         class WindowCreator {
             +createAppWindow(config)
         }
-        
-        namespace Windows {
-            class WindowController {
-                <<Interface>>
-                +init(options)
-                +toggleFullscreen()
-                +handleWindowAction(action)
-                +getVideoWindow()
-                +getInputWindow()
-                +dispose()
-            }
-            class WindowStrategyFactory {
-                +create()
-            }
-            class WindowPool {
-                +init()
-                +acquire(type)
-                +release(window)
-            }
-        }
-        
+
         class Playlist {
             -items: Array
             +add(item)
             +next()
+        }
+    }
+
+    namespace Windows {
+        class WindowController {
+            <<Interface>>
+            +init(options)
+            +toggleFullscreen()
+            +handleWindowAction(action)
+            +getVideoWindow()
+            +getInputWindow()
+            +dispose()
+        }
+
+        class WindowStrategyFactory {
+            +create()
+        }
+
+        class WindowPool {
+            +init()
+            +acquire(type)
+            +release(window)
         }
     }
 
@@ -273,22 +275,22 @@ classDiagram
     }
 
     %% Relationships
-    VideoPlayerApp --> CorePlayer : Owns
-    VideoPlayerApp --> WindowCreator : Uses
-    VideoPlayerApp --> Windows.WindowController : Uses
-    VideoPlayerApp --> ConfigManager : Uses
-    VideoPlayerApp --> Playlist : Manages
-    
-    CorePlayerImpl ..|> CorePlayer : Implements
-    CorePlayerImpl --> PlaybackScheduler : Schedules
-    CorePlayerImpl --> MediaPlayer : Reads Status
-    CorePlayerImpl --> PlayerStateMachine : Updates
-    
-    PlaybackScheduler --> TaskQueue : Uses
-    PlaybackScheduler --> PlayerStateMachine : Observes
-    PlaybackScheduler --> MediaPlayer : Executes
-    
-    MpvMediaPlayer ..|> MediaPlayer : Implements
+    VideoPlayerApp --> CorePlayer
+    VideoPlayerApp --> WindowCreator
+    VideoPlayerApp --> WindowController
+    VideoPlayerApp --> ConfigManager
+    VideoPlayerApp --> Playlist
+
+    CorePlayerImpl ..|> CorePlayer
+    CorePlayerImpl --> PlaybackScheduler
+    CorePlayerImpl --> MediaPlayer
+    CorePlayerImpl --> PlayerStateMachine
+
+    PlaybackScheduler --> TaskQueue
+    PlaybackScheduler --> PlayerStateMachine
+    PlaybackScheduler --> MediaPlayer
+
+    MpvMediaPlayer ..|> MediaPlayer
 ```
 
 ---
