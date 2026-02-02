@@ -314,6 +314,34 @@ export class VideoPlayerApp {
     }
   }
 
+  private async initWindowController(): Promise<void> {
+    if (!this.windowController) {
+      this.windowController = WindowStrategyFactory.create()
+      
+      // 转发事件
+      this.windowController.on('close', () => {
+          // 处理窗口关闭逻辑，比如恢复主窗口
+          this.handleWindowClose()
+      })
+      this.windowController.on('fullscreen-enter', () => {
+          // 可选：通知前端
+      })
+      this.windowController.on('fullscreen-exit', () => {
+          // 可选：通知前端
+      })
+      this.windowController.on('key-down', (key) => {
+          this.corePlayer.sendKey(key)
+      })
+      
+      // 初始化窗口
+      await this.windowController.init({
+          title: '视频播放器 - 视频播放',
+          width: 1280,
+          height: 720,
+      })
+    }
+  }
+
   getMainWindow(): BrowserWindow | undefined {
     return this.mainWindow ?? undefined
   }
@@ -392,33 +420,7 @@ export class VideoPlayerApp {
       this.mainWindow.hide()
     }
 
-    // 初始化/获取 WindowController (Strategy)
-    if (!this.windowController) {
-      this.windowController = WindowStrategyFactory.create()
-      
-      // 转发事件
-      this.windowController.on('close', () => {
-          // 处理窗口关闭逻辑，比如恢复主窗口
-          this.handleWindowClose()
-      })
-      this.windowController.on('fullscreen-enter', () => {
-          // 可选：通知前端
-      })
-      this.windowController.on('fullscreen-exit', () => {
-          // 可选：通知前端
-      })
-      this.windowController.on('key-down', (key) => {
-          this.corePlayer.sendKey(key)
-      })
-      
-      // 初始化窗口
-      await this.windowController.init({
-          title: '视频播放器 - 视频播放',
-          width: 1280,
-          height: 720,
-          // 如果需要预加载，可以在构造函数里做，这里直接 init
-      })
-    }
+    await this.initWindowController();
 
     const videoWindow = this.windowController.getVideoWindow()
     if (!videoWindow) {
