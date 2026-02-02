@@ -383,10 +383,6 @@ class CorePlayerImpl extends EventEmitter implements CorePlayer {
       meta: { time: safeTime },
       execute: async () => {
         await this.mediaPlayer.seek(safeTime)
-        const status = this.mediaPlayer.getStatus()
-        if (status) {
-          this.updateFromPlayerStatus(status)
-        }
       }
     }, (phase) => phase === 'playing' || phase === 'paused', 'replace')
   }
@@ -394,10 +390,6 @@ class CorePlayerImpl extends EventEmitter implements CorePlayer {
   async setVolume(volume: number): Promise<void> {
     // 音量是全局属性，不需要等待播放状态，直接执行以保证响应速度
     await this.mediaPlayer.setVolume(volume)
-    const status = this.mediaPlayer.getStatus()
-    if (status) {
-      this.updateFromPlayerStatus(status)
-    }
   }
 
   async stop(): Promise<void> {
