@@ -120,35 +120,35 @@ class CorePlayerImpl extends EventEmitter implements CorePlayer {
     }
     this.videoWindow = window
 
-    console.log('[CorePlayerImpl] setVideoWindow:', window)
+    // console.log('[CorePlayerImpl] setVideoWindow:', window)
     
-    // 如果窗口已设置，同时为 MpvMediaPlayer 设置窗口 ID
-    if (window && !window.isDestroyed()) {
-      let windowId: number | null = null
+    // // 如果窗口已设置，同时为 MpvMediaPlayer 设置窗口 ID
+    // if (window && !window.isDestroyed()) {
+    //   let windowId: number | null = null
       
-      try {
-        if (process.platform === 'darwin') {
-          windowId = getNSViewPointer(window)
-        } else if (process.platform === 'win32') {
-          windowId = getHWNDPointer(window)
-          if (windowId === null && !window.isVisible()) {
-            window.show()
-            await new Promise(resolve => setTimeout(resolve, WINDOW_PREPARE_DELAYS.WINDOWS_SHOW_DELAY_MS))
-            windowId = getHWNDPointer(window)
-          }
-        }
+    //   try {
+    //     if (process.platform === 'darwin') {
+    //       windowId = getNSViewPointer(window)
+    //     } else if (process.platform === 'win32') {
+    //       windowId = getHWNDPointer(window)
+    //       if (windowId === null && !window.isVisible()) {
+    //         window.show()
+    //         await new Promise(resolve => setTimeout(resolve, WINDOW_PREPARE_DELAYS.WINDOWS_SHOW_DELAY_MS))
+    //         windowId = getHWNDPointer(window)
+    //       }
+    //     }
         
-        if (windowId !== null) {
-          if (this.mediaPlayer instanceof MpvMediaPlayer) {
-            this.mediaPlayer.setWindowId(windowId)
-          }
-        }
-      } catch (error) {
-        logger.error('Error setting window ID for MpvMediaPlayer', {
-          error: error instanceof Error ? error.message : String(error)
-        })
-      }
-    }
+    //     if (windowId !== null) {
+    //       if (this.mediaPlayer instanceof MpvMediaPlayer) {
+    //         this.mediaPlayer.setWindowId(windowId)
+    //       }
+    //     }
+    //   } catch (error) {
+    //     logger.error('Error setting window ID for MpvMediaPlayer', {
+    //       error: error instanceof Error ? error.message : String(error)
+    //     })
+    //   }
+    // }
   }
   /**
    * 准备播放器用于播放（初始化 MediaPlayer 的窗口）
@@ -217,7 +217,7 @@ class CorePlayerImpl extends EventEmitter implements CorePlayer {
       this.setupResizeHandler()
       this.setupEventHandlers()
 
-      if (warmup && process.platform === 'darwin' && this.mediaPlayer instanceof MpvMediaPlayer) {
+      if (warmup && this.mediaPlayer instanceof MpvMediaPlayer) {
         try {
           await this.mediaPlayer.ensureReady()
         } catch (error) {
@@ -259,21 +259,6 @@ class CorePlayerImpl extends EventEmitter implements CorePlayer {
   }
 
   async play(media: Media, startTime?: number): Promise<void> {
-    // 1. play 是一个重置性操作，使用 'clear_all' 策略
-    // 这会自动清除队列中所有积压的任务（如旧的 seek, pause 等），避免死锁和无效操作
-    // 同时不需要显式调用 stop()，因为 handlePlayTask 内部会处理，或者我们可以依赖 clear_all 的副作用
-    
-    // 注意：虽然 clear_all 清除了队列，但如果当前正在播放，我们可能仍需先停止？
-    // handlePlayTask 会调用 prepareMediaPlayerForPlayback -> resetStatus
-    // 如果 MPV 正在播放，直接 loadfile 会覆盖，MPV 本身支持。
-    // 但为了状态机一致性，如果非 idle/stopped，我们最好显式 stop。
-    // 可是如果我们 clear_all 了，stop 任务也会被清除...
-    // 实际上，play 任务本身应该是一个原子操作：确保环境就绪 -> 播放。
-    
-    // 为了简化和避免死锁（如 seek 阻塞导致无法 play），play 任务将清除一切阻碍。
-    // 并且 play 任务本身不需要 precondition（只要队列空了，它就可以执行，并在执行中处理状态）
-    // 或者，我们让 play 任务依赖于 "无条件执行"
-    
     return this.scheduler.schedule({
       type: 'play',
       meta: { mediaUri: media.uri, startTime },

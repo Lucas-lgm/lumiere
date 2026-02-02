@@ -154,9 +154,7 @@ export class LibMPVController extends EventEmitter {
         } else if (process.platform === 'win32') {
           await this.setOption('vo', 'gpu-next')
           console.log('[libmpv] ✅ Set vo=gpu-next for wid mode (Windows)')
-          // Windows 上，如果提供了 windowId，在初始化前设置 wid
-          if (windowId !== undefined) {
-            console.log('[libmpv] Setting wid to HWND:', windowId, '(0x' + windowId.toString(16) + ')')
+          if (windowId) {
             try {
               const result = this.binding.setWindowId(this.instanceId, windowId)
               if (result) {
