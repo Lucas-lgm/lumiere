@@ -102,7 +102,8 @@ export class SingleWindowStrategy extends EventEmitter implements WindowControll
   private setupEventListeners() {
     if (!this.videoWindow) return
 
-    this.videoWindow.on('closed', () => {
+    this.videoWindow.on('close', (event) => {
+      event.preventDefault()
       this.emit('close')
       this.dispose()
     })

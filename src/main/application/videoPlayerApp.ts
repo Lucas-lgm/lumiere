@@ -129,6 +129,7 @@ class ConfigManager {
 export class VideoPlayerApp {
   readonly playlist: Playlist
   readonly config: ConfigManager
+  readonly windowPool: WindowPool
   
   // 新的窗口控制器（替代原有的 loose controlWindow/controlView）
   private windowController: WindowController | null = null
@@ -205,7 +206,8 @@ export class VideoPlayerApp {
     this.corePlayer.on('player-status', this.onPlayerStatusBroadcast)
     
     // 初始化窗口池
-    WindowPool.getInstance().init().catch(err => {
+    this.windowPool = WindowPool.getInstance()
+    this.windowPool.init().catch(err => {
       logger.error('Failed to init WindowPool', err)
     })
   }
@@ -320,7 +322,7 @@ export class VideoPlayerApp {
       
       // 转发事件
       this.windowController.on('close', () => {
-          // 处理窗口关闭逻辑，比如恢复主窗口
+          this.corePlayer.stop();
           this.handleWindowClose()
       })
       this.windowController.on('fullscreen-enter', () => {
@@ -414,11 +416,6 @@ export class VideoPlayerApp {
     }
 
     this.corePlayer.resetStatus()
-
-    // UI 层职责：窗口管理
-    if (this.mainWindow && this.mainWindow.isVisible()) {
-      this.mainWindow.hide()
-    }
 
     await this.initWindowController();
 
@@ -566,11 +563,11 @@ export class VideoPlayerApp {
 
   /** 窗口操作（封装窗口操作逻辑） */
   async windowAction(action: 'close' | 'minimize' | 'maximize'): Promise<void> {
-    if (action === 'close') {
-      this.windowController?.hide()
-      await this.stopPlayback();
-      await new Promise(resolve => setTimeout(resolve, 200))
-    }
+    // if (action === 'close') {
+    //   this.windowController?.hide()
+    //   await this.stopPlayback();
+    //   await new Promise(resolve => setTimeout(resolve, 200))
+    // }
     if (this.windowController) {
         this.windowController.handleWindowAction(action)
     }
@@ -619,12 +616,11 @@ export class VideoPlayerApp {
       }
       logger.debug('Main window closing')
       this.isQuitting = true
-      this.releaseCorePlayerListeners()
       await this.corePlayer.cleanup().catch(() => {})
-      // 退出应用
+      this.releaseCorePlayerListeners()
+      this.windowPool.clear();
       app.quit()
-      // 注意：在开发模式下，app.quit() 只会退出 Electron 应用，
-      // Vite 开发服务器会继续运行。要完全退出开发环境，请在终端按 Ctrl+C
+      console.log('Application quit')
     })
 
     return mainWindow
