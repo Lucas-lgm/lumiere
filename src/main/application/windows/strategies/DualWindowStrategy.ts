@@ -50,11 +50,6 @@ export class DualWindowStrategy extends EventEmitter implements WindowController
       // 1. 获取 VideoWindow (从池中)
       this.videoWindow = WindowPool.getInstance().acquire('video')
       
-      // 设置 VideoWindow 初始状态
-      // Windows 关键：VideoWindow 不需要设置背景色为黑色，MPV 会覆盖它
-      // 但为了防止闪烁，可以先设为透明或黑色
-      // this.videoWindow.setBackgroundColor('#000000') 
-      
       // 2. 获取 ControlWindow (从池中)
       this.controlWindow = WindowPool.getInstance().acquire('control')
       
@@ -66,10 +61,7 @@ export class DualWindowStrategy extends EventEmitter implements WindowController
       this.controlWindow.setBounds(bounds)
 
       // 5. 建立父子关系
-      // 恢复父子关系，以确保任务栏行为正确（如点击任务栏图标同时最小化/恢复）
-      // 并且子窗口会自动保持在父窗口之上
       this.controlWindow.setParentWindow(this.videoWindow)
-      // this.controlWindow.setAlwaysOnTop(true) // 有了父子关系，不需要强制置顶
 
       // 6. 初始化同步器
       this.synchronizer = new WindowSynchronizer(this.videoWindow, this.controlWindow)
@@ -79,8 +71,6 @@ export class DualWindowStrategy extends EventEmitter implements WindowController
       this.setupEventListeners()
 
       // 8. 加载 UI 内容 (如果需要)
-      // 如果池里的窗口已经是 dirty 的，可能需要 reload，但通常池会 reset。
-      // 这里假设池出来的窗口是干净的，但需要加载具体的路由
       this.reloadControlLayer()
 
       // 9. 显示窗口 (如果不是预加载)
