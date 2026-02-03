@@ -18,6 +18,10 @@ export class SingleWindowStrategy extends EventEmitter implements WindowControll
     super()
     this.lifecycle = new WindowLifecycle()
   }
+  hide(): void {
+    this.videoWindow?.hide()
+    this.lifecycle.transition(WindowEvent.HIDE)
+  }
 
   async init(options: WindowCreationOptions): Promise<void> {
     this.lifecycle.transition(WindowEvent.INIT)
@@ -127,7 +131,7 @@ export class SingleWindowStrategy extends EventEmitter implements WindowControll
     }
   }
 
-  private show() {
+  show() {
     if (!this.videoWindow) return
     this.videoWindow.show()
     this.videoWindow.focus()

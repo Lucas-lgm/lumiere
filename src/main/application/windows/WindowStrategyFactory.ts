@@ -14,6 +14,7 @@ export class WindowStrategyFactory {
 
     logger.info(`Creating window strategy for platform: ${platform}`)
 
+    return new SingleWindowStrategy()
     if (platform === 'win32') {
       return new DualWindowStrategy()
     } else if (platform === 'darwin') {

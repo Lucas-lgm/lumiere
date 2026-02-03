@@ -45,6 +45,16 @@ export interface WindowController extends EventEmitter {
   getVideoWindow(): BrowserWindow | null;
 
   /**
+   * Show the window (if hidden)
+   */
+  show(): void;
+
+  /**
+   * Hide the window (if visible)
+   */
+  hide(): void;
+
+  /**
    * Reset the layout (e.g. after screen resolution change)
    */
   resetLayout(): void;

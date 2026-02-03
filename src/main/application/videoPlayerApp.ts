@@ -565,7 +565,12 @@ export class VideoPlayerApp {
   }
 
   /** 窗口操作（封装窗口操作逻辑） */
-  windowAction(action: 'close' | 'minimize' | 'maximize'): void {
+  async windowAction(action: 'close' | 'minimize' | 'maximize'): Promise<void> {
+    if (action === 'close') {
+      this.windowController?.hide()
+      await this.stopPlayback();
+      await new Promise(resolve => setTimeout(resolve, 200))
+    }
     if (this.windowController) {
         this.windowController.handleWindowAction(action)
     }

@@ -36,6 +36,11 @@ export class DualWindowStrategy extends EventEmitter implements WindowController
       // 可以在这里处理统一的副作用，比如通知渲染进程状态变更
     })
   }
+  hide(): void {
+    this.videoWindow?.hide()
+    this.controlWindow?.hide()
+    this.lifecycle.transition(WindowEvent.HIDE)
+  }
 
   async init(options: WindowCreationOptions): Promise<void> {
     this.lifecycle.transition(WindowEvent.INIT)
@@ -156,7 +161,7 @@ export class DualWindowStrategy extends EventEmitter implements WindowController
     })
   }
 
-  private show() {
+  show() {
     if (!this.videoWindow || !this.controlWindow) return
     
     // 先显示 VideoWindow (底层)
