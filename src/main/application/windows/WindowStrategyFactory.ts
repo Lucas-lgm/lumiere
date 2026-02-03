@@ -1,6 +1,6 @@
 import { WindowController } from './WindowController'
-import { DualWindowStrategy } from './strategies/WindowsStrategy'
-import { SingleWindowStrategy } from './strategies/MacStrategy'
+import { DualWindowStrategy } from './strategies/DualWindowStrategy'
+import { SingleWindowStrategy } from './strategies/SingleWindowStrategy'
 import { createLogger } from '../../infrastructure/logging'
 
 const logger = createLogger('WindowStrategyFactory')
