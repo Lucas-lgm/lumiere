@@ -616,11 +616,10 @@ export class VideoPlayerApp {
       }
       logger.debug('Main window closing')
       this.isQuitting = true
-      await this.corePlayer.cleanup().catch(() => {})
       this.releaseCorePlayerListeners()
+      await this.corePlayer.cleanup().catch(() => {})
       this.windowPool.clear();
       app.quit()
-      console.log('Application quit')
     })
 
     return mainWindow
