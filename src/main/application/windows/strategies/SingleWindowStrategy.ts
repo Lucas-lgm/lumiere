@@ -3,7 +3,7 @@ import { EventEmitter } from 'events'
 import { createLogger } from '../../../infrastructure/logging'
 import { WindowController, WindowCreationOptions, WindowAction } from '../WindowController'
 import { WindowPool } from '../WindowPool'
-import { WindowLifecycle, WindowEvent } from '../WindowLifecycle'
+import { WindowLifecycle, WindowEvent, WindowState } from '../WindowLifecycle'
 import { mapElectronInputToMpvKey } from '../../utils/InputMapper'
 import { join } from 'path'
 
@@ -200,8 +200,15 @@ export class SingleWindowStrategy extends EventEmitter implements WindowControll
 
   toggleFullscreen(): void {
     if (!this.videoWindow) return
-    const isFullscreen = this.videoWindow.isFullScreen()
+    // const isFullscreen = this.videoWindow.isFullScreen()
+    const lifecycleState = this.lifecycle.state
+    const isFullscreen = lifecycleState === WindowState.FULLSCREEN
     this.videoWindow.setFullScreen(!isFullscreen)
+    if (!isFullscreen) {
+      this.lifecycle.transition(WindowEvent.ENTER_FULLSCREEN)
+    } else {
+      this.lifecycle.transition(WindowEvent.EXIT_FULLSCREEN)
+    }
   }
 
   getInputWindow(): BrowserWindow | null {
