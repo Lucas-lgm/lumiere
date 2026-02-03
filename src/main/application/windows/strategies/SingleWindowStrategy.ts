@@ -181,6 +181,8 @@ export class SingleWindowStrategy extends EventEmitter implements WindowControll
       case 'maximize':
         if (!this.videoWindow.isMaximized()) {
           this.videoWindow.maximize()
+        } else {
+          this.videoWindow.unmaximize()
         }
         break
       case 'restore':
