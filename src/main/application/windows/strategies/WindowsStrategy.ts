@@ -9,7 +9,7 @@ import { mapElectronInputToMpvKey } from '../../utils/InputMapper'
 import { UI_DELAYS, WINDOW_DELAYS } from '../../constants'
 import { join } from 'path'
 
-const logger = createLogger('WindowsStrategy')
+const logger = createLogger('DualWindowStrategy')
 
 /**
  * Windows Strategy: Dual-Window Composition
@@ -21,7 +21,7 @@ const logger = createLogger('WindowsStrategy')
  * - ControlWindow (Top): 负责 UI 交互，无边框，透明，处理用户输入。
  * - Synchronizer: 负责将 Top 的位置/大小同步给 Bottom。
  */
-export class WindowsStrategy extends EventEmitter implements WindowController {
+export class DualWindowStrategy extends EventEmitter implements WindowController {
   private videoWindow: BrowserWindow | null = null
   private controlWindow: BrowserWindow | null = null
   private synchronizer: WindowSynchronizer | null = null
@@ -39,7 +39,7 @@ export class WindowsStrategy extends EventEmitter implements WindowController {
 
   async init(options: WindowCreationOptions): Promise<void> {
     this.lifecycle.transition(WindowEvent.INIT)
-    logger.info('Initializing Windows Strategy (Dual-Window)...')
+    logger.info('Initializing Dual Window Strategy...')
 
     try {
       // 1. 获取 VideoWindow (从池中)
@@ -93,7 +93,7 @@ export class WindowsStrategy extends EventEmitter implements WindowController {
       }
 
     } catch (error) {
-      logger.error('Failed to initialize WindowsStrategy', error)
+      logger.error('Failed to initialize DualWindowStrategy', error)
       this.dispose()
       throw error
     }
@@ -285,7 +285,7 @@ export class WindowsStrategy extends EventEmitter implements WindowController {
   }
 
   dispose(): void {
-    logger.info('Disposing WindowsStrategy resources')
+    logger.info('Disposing DualWindowStrategy resources')
     
     if (this.synchronizer) {
       this.synchronizer.stopSync()

@@ -7,9 +7,9 @@ import { WindowLifecycle, WindowEvent } from '../WindowLifecycle'
 import { mapElectronInputToMpvKey } from '../../utils/InputMapper'
 import { join } from 'path'
 
-const logger = createLogger('MacStrategy')
+const logger = createLogger('SingleWindowStrategy')
 
-export class MacStrategy extends EventEmitter implements WindowController {
+export class SingleWindowStrategy extends EventEmitter implements WindowController {
   private videoWindow: BrowserWindow | null = null
   private controlView: BrowserView | null = null
   private lifecycle: WindowLifecycle
@@ -21,7 +21,7 @@ export class MacStrategy extends EventEmitter implements WindowController {
 
   async init(options: WindowCreationOptions): Promise<void> {
     this.lifecycle.transition(WindowEvent.INIT)
-    logger.info('Initializing Mac Strategy (Single-Window)...')
+    logger.info('Initializing Single Window Strategy...')
 
     try {
       // Acquire VideoWindow from the pool
@@ -51,7 +51,7 @@ export class MacStrategy extends EventEmitter implements WindowController {
       }
 
     } catch (error) {
-      logger.error('Failed to initialize MacStrategy', error)
+      logger.error('Failed to initialize SingleWindowStrategy', error)
       this.dispose()
       throw error
     }
@@ -233,7 +233,7 @@ export class MacStrategy extends EventEmitter implements WindowController {
   }
 
   dispose(): void {
-    logger.info('Disposing MacStrategy resources')
+    logger.info('Disposing SingleWindowStrategy resources')
     
     // BrowserView is destroyed with the Window, but for pooled Windows, clear the view manually
     if (this.videoWindow && this.controlView) {

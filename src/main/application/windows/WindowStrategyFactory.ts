@@ -1,6 +1,6 @@
 import { WindowController } from './WindowController'
-import { WindowsStrategy } from './strategies/WindowsStrategy'
-import { MacStrategy } from './strategies/MacStrategy'
+import { DualWindowStrategy } from './strategies/WindowsStrategy'
+import { SingleWindowStrategy } from './strategies/MacStrategy'
 import { createLogger } from '../../infrastructure/logging'
 
 const logger = createLogger('WindowStrategyFactory')
@@ -15,13 +15,13 @@ export class WindowStrategyFactory {
     logger.info(`Creating window strategy for platform: ${platform}`)
 
     if (platform === 'win32') {
-      return new WindowsStrategy()
+      return new DualWindowStrategy()
     } else if (platform === 'darwin') {
-      return new MacStrategy()
+      return new SingleWindowStrategy()
     } else {
       // Default fallback (Linux or others), using MacStrategy logic (Single Window) is usually safer/simpler
       logger.warn(`Unsupported platform: ${platform}, falling back to Single-Window strategy`)
-      return new MacStrategy() 
+      return new SingleWindowStrategy() 
     }
   }
 }
