@@ -103,7 +103,7 @@ export class WindowPool {
 
     logger.debug(`Releasing window [${entry.id}] to pool`)
     
-    // 重置状态
+    // 重置状态（但不再强制加载 about:blank，由上层策略负责加载实际页面）
     try {
       window.hide()
       window.setParentWindow(null) // 解除父子关系
@@ -111,9 +111,6 @@ export class WindowPool {
       // 移除所有监听器，防止内存泄漏和逻辑干扰
       window.removeAllListeners()
       window.webContents.removeAllListeners()
-      
-      // 加载空页面或重置页面，清理 DOM 和 JS 上下文
-      window.webContents.loadURL('about:blank')
       
       // 恢复一些基础属性
       window.setOpacity(1)

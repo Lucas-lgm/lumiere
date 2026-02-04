@@ -215,6 +215,7 @@ classDiagram
             +init()
             +acquire(type)
             +release(window)
+            -pool: PooledWindow[]
         }
     }
 
@@ -547,6 +548,19 @@ A `WindowSynchronizer` ensures the two windows move and resize in unison. It use
 ### 6.3 Lifecycle & Fullscreen
 Window states (Visible, Fullscreen, Minimized) are managed by a **Finite State Machine (WindowLifecycle)** to prevent illegal transitions.
 *   **Fullscreen Logic**: Prioritizes the `ControlWindow`'s physical state. Includes a "Forced Reset" mechanism to handle Windows-specific edge cases where the window exits fullscreen mode but fails to restore its original dimensions.
+
+### 6.4 Window Pooling Semantics
+
+The `WindowPool` optimizes startup and video-switch latency by **pre-creating** and **reusing** invisible `BrowserWindow` instances:
+
+*   **Initialization**: `init()` prewarms at least one video window with the correct `preload` configuration but does not load UI routes.
+*   **Acquire**: `acquire(type)` returns an in-use window from the pool (or creates a new one) without assuming any specific URL/content is loaded.
+*   **Release**:
+    *   Hides the window, clears parent relations, removes all window and `webContents` listeners, and resets basic properties (opacity, mouse events).
+    *   **Does not** force `about:blank` or any other URL; the responsibility to load the correct UI now lives entirely in the window strategies (`SingleWindowStrategy` / `DualWindowStrategy`).
+    *   This avoids extra transitional loads that can trigger noisy Electron internal logs (e.g., `ipcNative`-related warnings) while keeping lifecycle isolation at the strategy layer.
+
+Window strategies are therefore the **single source of truth** for "what UI is loaded where", while `WindowPool` is purely responsible for lifecycle and reuse of the underlying `BrowserWindow` shells.
 
 ## 7. Directory Structure Mapping
 
