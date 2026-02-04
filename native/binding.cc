@@ -22,11 +22,14 @@
 #include <mpv/render_gl.h>
 
 // ==================== C++ 标准库 ====================
-#include <iostream>
 #include <thread>
 #include <mutex>
 #include <map>
 #include <string>
+
+#ifndef __APPLE__
+struct GLRenderContext;  // Windows: 仅指针，前向声明即可；完整定义在 macOS 的 mpv_render_gl.mm
+#endif
 
 /**
  * 播放器实例（Player Instance）

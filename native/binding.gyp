@@ -69,7 +69,8 @@
         ["OS=='win'", {
           "msvs_settings": {
             "VCCLCompilerTool": {
-              "ExceptionHandling": 1
+              "ExceptionHandling": 1,
+              "AdditionalOptions": [ "/utf-8" ]
             }
           },
           "include_dirs": [
