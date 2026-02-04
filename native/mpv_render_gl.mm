@@ -29,7 +29,6 @@
 #include <dlfcn.h>
 #include <cmath>
 #include <algorithm>  // for std::max, std::min
-#include <unistd.h>  // for usleep
 #include <thread>
 #include <chrono>
 #include <memory>
@@ -151,6 +150,14 @@ struct ScopedCGLock {
 static std::map<int64_t, std::shared_ptr<GLRenderContext>> g_renderContexts;
 static std::mutex g_renderMutex;
 
+/** 在持锁下查找渲染上下文，返回 shared_ptr 以保持生命周期。 */
+static std::shared_ptr<GLRenderContext> getRenderContext(int64_t instanceId) {
+    std::lock_guard<std::mutex> lock(g_renderMutex);
+    auto it = g_renderContexts.find(instanceId);
+    if (it == g_renderContexts.end()) return nullptr;
+    return it->second;
+}
+
 // ==================== 公共 C API 声明 ====================
 extern "C" void mpv_render_frame_for_instance(int64_t instanceId);
 extern "C" void mpv_request_render(int64_t instanceId);
@@ -185,16 +192,6 @@ static void set_render_icc_profile(GLRenderContext *rc);
  * @param rc 渲染上下文
  */
 static void init_default_sdr_config(GLRenderContext *rc);
-
-/**
- * 计算最小渲染间隔（Calculate Minimum Render Interval）
- * 
- * 根据视频帧率动态计算最小渲染间隔，避免过度渲染。
- * 
- * @param rc 渲染上下文
- * @return 最小渲染间隔（毫秒）
- */
-static uint64_t calculateMinRenderInterval(GLRenderContext *rc);
 
 /**
  * 检查 Dolby Vision 轨道（Check Dolby Vision Track）
@@ -297,13 +294,7 @@ static bool check_dolby_vision_track(mpv_handle *mpv);
         rc->lastHdrUpdateMs.store(nowMs);
         // 延迟 HDR 更新和帧率更新到下一个 RunLoop 周期，让当前渲染先完成
         dispatch_async(dispatch_get_main_queue(), ^{
-            // 再次检查，避免在延迟期间 context 被销毁
-            std::shared_ptr<GLRenderContext> asyncRc = nullptr;
-            {
-                std::lock_guard<std::mutex> lock(g_renderMutex);
-                auto it = g_renderContexts.find(rc->instanceId);
-                if (it != g_renderContexts.end()) asyncRc = it->second;
-            }
+            std::shared_ptr<GLRenderContext> asyncRc = getRenderContext(rc->instanceId);
             if (asyncRc && !asyncRc->isDestroying.load()) {
                 // 更新视频帧率
                 double estimatedFps = 0.0;
@@ -545,19 +536,6 @@ static void log_hdr_config(GLRenderContext *rc) {
         }
         contentsScale = layer.contentsScale;
     }
-    
-    // NSLog(@"[mpv_hdr_cfg] icc-profile-auto=%d target-prim=%s target-trc=%s screenshot-tag-colorspace=%d target-peak-int=%d target-peak-str=%s tone-mapping=%s edr=%.3f wantsEDR=%d contentsScale=%.2f hdrActive=%d",
-    //       iccAuto,
-    //       primariesCfg,
-    //       trcCfg,
-    //       screenshotTag,
-    //       targetPeakInt,
-    //       peakCfg,
-    //       toneCfg,
-    //       edr,
-    //       wantsEDR ? 1 : 0,
-    //       contentsScale,
-    //       rc->hdrActive ? 1 : 0);
     
     if (targetPrim) mpv_free(targetPrim);
     if (targetTrc) mpv_free(targetTrc);
@@ -931,35 +909,22 @@ static void init_default_sdr_config(GLRenderContext *rc) {
  */
 static void set_render_icc_profile(GLRenderContext *rc) {
     if (!rc || !rc->mpvRenderCtx || !rc->view) return;
-    NSScreen *screen = nil;
-    if (rc->view.window) {
-        screen = rc->view.window.screen;
-    }
-    if (!screen) {
-        screen = [NSScreen mainScreen];
-    }
-    NSColorSpace *cs = nil;
-    if (screen && screen.colorSpace) {
-        cs = screen.colorSpace;
-    } else {
-        cs = [NSColorSpace sRGBColorSpace];
-    }
+    NSScreen *screen = rc->view.window ? rc->view.window.screen : [NSScreen mainScreen];
+    NSColorSpace *cs = (screen && screen.colorSpace) ? screen.colorSpace : [NSColorSpace sRGBColorSpace];
     NSData *icc = cs.ICCProfileData;
     if (!icc || icc.length <= 0) return;
 
+    std::vector<uint8_t> copy;
     {
         std::lock_guard<std::mutex> lock(rc->iccMutex);
         rc->iccProfileBytes.assign((const uint8_t *)icc.bytes, (const uint8_t *)icc.bytes + icc.length);
+        copy = rc->iccProfileBytes;
     }
-
+    if (copy.empty()) return;
     mpv_byte_array arr;
     memset(&arr, 0, sizeof(arr));
-    {
-        std::lock_guard<std::mutex> lock(rc->iccMutex);
-        if (rc->iccProfileBytes.empty()) return;
-        arr.data = rc->iccProfileBytes.data();
-        arr.size = rc->iccProfileBytes.size();
-    }
+    arr.data = copy.data();
+    arr.size = copy.size();
     mpv_render_param param = { MPV_RENDER_PARAM_ICC_PROFILE, &arr };
     mpv_render_context_set_parameter(rc->mpvRenderCtx, param);
 }
@@ -998,14 +963,7 @@ static void runOnMainAsync(dispatch_block_t block) {
  */
 static void on_mpv_redraw(void *ctx) {
     int64_t instanceId = (int64_t)(intptr_t)ctx;
-    std::shared_ptr<GLRenderContext> rc = nullptr;
-    {
-        std::lock_guard<std::mutex> lock(g_renderMutex);
-        auto it = g_renderContexts.find(instanceId);
-        if (it == g_renderContexts.end()) return;
-        rc = it->second;
-    }
-    
+    std::shared_ptr<GLRenderContext> rc = getRenderContext(instanceId);
     if (!rc || rc->isDestroying.load()) return;
     
     // JavaScript 驱动模式下，只标记需要重绘，不自动触发渲染
@@ -1345,19 +1303,15 @@ extern "C" GLRenderContext *mpv_create_gl_context_for_view(int64_t instanceId, v
     
     // create GL layer + context and read initial size - must be on main thread
     if (!isMainThread()) {
-        std::atomic<bool>* ok = new std::atomic<bool>(false);
+        __block bool result = false;
+        dispatch_semaphore_t sem = dispatch_semaphore_create(0);
         GLRenderContext* rawRc = rc.get();
         runOnMainAsync(^{
-            bool result = createGLForView(rawRc);
-            ok->store(result);
+            result = createGLForView(rawRc);
+            dispatch_semaphore_signal(sem);
         });
-        int waitCount = 0;
-        while (!ok->load() && waitCount < 100) {
-            usleep(10000); // 等待 10ms
-            waitCount++;
-        }
-        bool result = ok->load();
-        delete ok;
+        dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);
+        dispatch_release(sem);
         if (!result) {
             destroyGL(rc);
             return nullptr;
@@ -1416,14 +1370,7 @@ extern "C" void mpv_destroy_gl_context(int64_t instanceId) {
 extern "C" void mpv_set_window_size(int64_t instanceId, int width, int height) {
     if (width <= 0 || height <= 0) return;
     
-    std::shared_ptr<GLRenderContext> rc = nullptr;
-    {
-        std::lock_guard<std::mutex> lock(g_renderMutex);
-        auto it = g_renderContexts.find(instanceId);
-        if (it == g_renderContexts.end()) return;
-        rc = it->second;
-    }
-    
+    std::shared_ptr<GLRenderContext> rc = getRenderContext(instanceId);
     if (!rc) return;
 
     bool wasScheduled = rc->resizeScheduled.exchange(true);
@@ -1485,43 +1432,15 @@ extern "C" void mpv_set_window_size(int64_t instanceId, int width, int height) {
  * @param instanceId 播放器实例 ID
  */
 extern "C" void mpv_request_render(int64_t instanceId) {
-    std::shared_ptr<GLRenderContext> rc = nullptr;
-    {
-        std::lock_guard<std::mutex> lock(g_renderMutex);
-        auto it = g_renderContexts.find(instanceId);
-        if (it == g_renderContexts.end()) return;
-        rc = it->second;
-    }
-    
-    if (!rc) return;
-    
-    // 一次性加载原子变量
-    bool isDestroying = rc->isDestroying.load();
-    if (isDestroying) return;
+    std::shared_ptr<GLRenderContext> rc = getRenderContext(instanceId);
+    if (!rc || rc->isDestroying.load()) return;
     
     rc->needRedraw.store(true);
     bool wasScheduled = rc->displayScheduled.exchange(true);
     if (wasScheduled) return;
     
-    // 优化：不再强制切回主线程调用 setNeedsDisplay
-    // CALayer 的 setNeedsDisplay 是线程安全的，可以直接在当前线程调用。
-    // 这样可以避免高频的 dispatch_async 冲击 Electron 的主线程，
-    // 解决高帧率视频播放时主进程 CPU 占用过高的问题。
-    {
-        std::shared_ptr<GLRenderContext> inner = nullptr;
-        {
-            std::lock_guard<std::mutex> lock(g_renderMutex);
-            auto it = g_renderContexts.find(instanceId);
-            if (it != g_renderContexts.end()) inner = it->second;
-        }
-        if (!inner) return;
-        
-        // 一次性加载原子变量
-        bool innerDestroying = inner->isDestroying.load();
-        if (innerDestroying) return;
-        if (inner->glLayer) {
-            [inner->glLayer setNeedsDisplay];
-        }
+    if (rc->glLayer) {
+        [rc->glLayer setNeedsDisplay];
     }
 }
 
@@ -1548,14 +1467,7 @@ extern "C" void mpv_render_frame_for_instance(int64_t instanceId) {
  * @param enabled 1 = JavaScript 驱动模式（渲染由 JS 端控制），0 = CVDisplayLink 驱动模式（默认）
  */
 extern "C" void mpv_set_js_driven_render_mode(int64_t instanceId, int enabled) {
-    std::shared_ptr<GLRenderContext> rc = nullptr;
-    {
-        std::lock_guard<std::mutex> lock(g_renderMutex);
-        auto it = g_renderContexts.find(instanceId);
-        if (it == g_renderContexts.end()) return;
-        rc = it->second;
-    }
-    
+    std::shared_ptr<GLRenderContext> rc = getRenderContext(instanceId);
     if (!rc || rc->isDestroying.load()) return;
     
     bool jsMode = (enabled != 0);
@@ -1580,14 +1492,7 @@ extern "C" void mpv_set_js_driven_render_mode(int64_t instanceId, int enabled) {
  * @return 1 = JavaScript 驱动模式，0 = CVDisplayLink 驱动模式
  */
 extern "C" int mpv_get_js_driven_render_mode(int64_t instanceId) {
-    std::shared_ptr<GLRenderContext> rc = nullptr;
-    {
-        std::lock_guard<std::mutex> lock(g_renderMutex);
-        auto it = g_renderContexts.find(instanceId);
-        if (it == g_renderContexts.end()) return 0;
-        rc = it->second;
-    }
-    
+    std::shared_ptr<GLRenderContext> rc = getRenderContext(instanceId);
     if (!rc || rc->isDestroying.load()) return 0;
     
     return rc->jsDrivenRenderMode.load() ? 1 : 0;
@@ -1602,14 +1507,7 @@ extern "C" int mpv_get_js_driven_render_mode(int64_t instanceId) {
  * @param enabled 1 = 启用黑屏，0 = 禁用黑屏
  */
 extern "C" void mpv_set_force_black_mode(int64_t instanceId, int enabled) {
-    std::shared_ptr<GLRenderContext> rc = nullptr;
-    {
-        std::lock_guard<std::mutex> lock(g_renderMutex);
-        auto it = g_renderContexts.find(instanceId);
-        if (it == g_renderContexts.end()) return;
-        rc = it->second;
-    }
-    
+    std::shared_ptr<GLRenderContext> rc = getRenderContext(instanceId);
     if (!rc || rc->isDestroying.load()) return;
     
     rc->forceBlackMode.store(enabled != 0);
@@ -1625,42 +1523,22 @@ extern "C" void mpv_set_force_black_mode(int64_t instanceId, int enabled) {
  * @param enabled 1 = 启用 HDR，0 = 禁用 HDR（使用 SDR）
  */
 extern "C" void mpv_set_hdr_mode(int64_t instanceId, int enabled) {
-    std::shared_ptr<GLRenderContext> rc = nullptr;
-    {
-        std::lock_guard<std::mutex> lock(g_renderMutex);
-        auto it = g_renderContexts.find(instanceId);
-        if (it == g_renderContexts.end()) return;
-        rc = it->second;
-    }
-    
+    std::shared_ptr<GLRenderContext> rc = getRenderContext(instanceId);
     if (!rc || rc->isDestroying.load()) return;
     
     rc->hdrUserEnabled.store(enabled != 0);
     rc->lastHdrUpdateMs.store(0);
-    // NSLog(@"[mpv_hdr] mpv_set_hdr_mode: instanceId=%lld enabled=%d", (long long)instanceId, enabled ? 1 : 0);
     
-    // 立即应用 HDR 配置（在主线程上执行）
-    // 这样可以确保在暂停状态下切换 HDR 时，配置能立即生效
-    // 而不是等待渲染时异步更新，导致渲染效果不正确
-    // 注意：update_hdr_mode 需要访问 NSView，必须在主线程执行
+    // 立即应用 HDR 配置（在主线程上执行）。update_hdr_mode 需访问 NSView，必须在主线程执行。
+    // 注意：非主线程时使用 dispatch_sync 可能死锁（若主线程在等待当前线程），建议由调用方在主线程调用。
     if (isMainThread()) {
-        // 在主线程上直接同步执行，确保立即生效
-        update_hdr_mode(rc.get(), true); // forceApply=true 确保立即应用
-        // 触发渲染以显示 HDR 效果
+        update_hdr_mode(rc.get(), true);
         mpv_request_render(instanceId);
     } else {
-        // 不在主线程，同步切换到主线程执行
-        // 使用 dispatch_sync 确保 HDR 配置立即应用，避免异步延迟导致渲染效果不正确
         dispatch_sync(dispatch_get_main_queue(), ^{
-            std::shared_ptr<GLRenderContext> inner = nullptr;
-            {
-                std::lock_guard<std::mutex> lock(g_renderMutex);
-                auto it = g_renderContexts.find(instanceId);
-                if (it != g_renderContexts.end()) inner = it->second;
-            }
+            std::shared_ptr<GLRenderContext> inner = getRenderContext(instanceId);
             if (inner && !inner->isDestroying.load()) {
-                update_hdr_mode(inner.get(), true); // forceApply=true 确保立即应用
-                // 触发渲染以显示 HDR 效果
+                update_hdr_mode(inner.get(), true);
                 mpv_request_render(instanceId);
             }
         });
@@ -1676,14 +1554,7 @@ extern "C" void mpv_set_hdr_mode(int64_t instanceId, int enabled) {
  * @param instanceId 播放器实例 ID
  */
 extern "C" void mpv_debug_hdr_status(int64_t instanceId) {
-    std::shared_ptr<GLRenderContext> rc = nullptr;
-    {
-        std::lock_guard<std::mutex> lock(g_renderMutex);
-        auto it = g_renderContexts.find(instanceId);
-        if (it == g_renderContexts.end()) return;
-        rc = it->second;
-    }
-    
+    std::shared_ptr<GLRenderContext> rc = getRenderContext(instanceId);
     if (!rc || !rc->mpvHandle) return;
     
     // 获取当前视频参数

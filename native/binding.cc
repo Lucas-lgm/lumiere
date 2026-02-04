@@ -22,7 +22,6 @@
 #include <mpv/render_gl.h>
 
 // ==================== C++ 标准库 ====================
-#include <iostream>
 #include <thread>
 #include <mutex>
 #include <map>
@@ -120,6 +119,35 @@ using PlaybackEventMessage = MPVEventMessage;
 static std::map<int64_t, MPVInstance*> instances;
 static std::mutex instancesMutex;
 static int64_t nextInstanceId = 1;
+
+/**
+ * 在 instancesMutex 下查找实例并执行 fn(inst)。
+ * 若未找到或 ctx 无效则向 env 抛错并返回 false。
+ */
+template<typename F>
+static bool withInstance(Napi::Env env, int64_t id, F fn) {
+    std::lock_guard<std::mutex> lock(instancesMutex);
+    auto it = instances.find(id);
+    if (it == instances.end() || !it->second->ctx) {
+        Napi::Error::New(env, "Invalid mpv instance").ThrowAsJavaScriptException();
+        return false;
+    }
+    fn(it->second);
+    return true;
+}
+
+/**
+ * 查找实例并在持锁下执行 fn；若未找到或 ctx 无效则返回 false（不抛错）。
+ * 用于不要求实例必须存在的调用（如 Windows SetWindowSize）。
+ */
+template<typename F>
+static bool withInstanceIf(int64_t id, F fn) {
+    std::lock_guard<std::mutex> lock(instancesMutex);
+    auto it = instances.find(id);
+    if (it == instances.end() || !it->second->ctx) return false;
+    fn(it->second);
+    return true;
+}
 
 // ==================== 事件循环 ====================
 /**
@@ -257,37 +285,30 @@ Napi::Value AttachView(const Napi::CallbackInfo& info) {
     int64_t id = info[0].As<Napi::Number>().Int64Value();
     int64_t viewPtr = info[1].As<Napi::Number>().Int64Value();
     
-    std::lock_guard<std::mutex> lock(instancesMutex);
-    auto it = instances.find(id);
-    if (it == instances.end() || !it->second->ctx) {
-        Napi::Error::New(env, "Invalid mpv instance").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-    
-    MPVInstance* inst = it->second;
-    
+    bool done = false;
+    if (!withInstance(env, id, [&](MPVInstance* inst) {
 #ifdef __APPLE__
-    // macOS: 使用 render API，创建 GL 上下文
-    if (inst->glCtx) {
-        mpv_destroy_gl_context(id);
-        inst->glCtx = nullptr;
-    }
-    inst->glCtx = mpv_create_gl_context_for_view(id, (void*)viewPtr, inst->ctx);
-    if (!inst->glCtx) {
-        Napi::Error::New(env, "Failed to create GL context for view").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-    mpv_set_force_black_mode(id, 1);
+        if (inst->glCtx) {
+            mpv_destroy_gl_context(id);
+            inst->glCtx = nullptr;
+        }
+        inst->glCtx = mpv_create_gl_context_for_view(id, (void*)viewPtr, inst->ctx);
+        if (!inst->glCtx) {
+            Napi::Error::New(env, "Failed to create GL context for view").ThrowAsJavaScriptException();
+            return;
+        }
+        mpv_set_force_black_mode(id, 1);
 #elif defined(_WIN32)
-    // Windows: 使用 wid 嵌入方式
-    // viewPtr 是 HWND，通过 SetWindowId 设置
-    int err = mpv_set_option(inst->ctx, "wid", MPV_FORMAT_INT64, &viewPtr);
-    if (err < 0) {
-        Napi::Error::New(env, std::string("Failed to set window ID: ") + mpv_error_string(err))
-            .ThrowAsJavaScriptException();
-        return env.Null();
-    }
+        int err = mpv_set_option(inst->ctx, "wid", MPV_FORMAT_INT64, &viewPtr);
+        if (err < 0) {
+            Napi::Error::New(env, std::string("Failed to set window ID: ") + mpv_error_string(err))
+                .ThrowAsJavaScriptException();
+            return;
+        }
 #endif
+        done = true;
+    })) return env.Null();
+    if (!done) return env.Null();
     
     return env.Undefined();
 }
@@ -316,20 +337,16 @@ Napi::Value SetWindowSize(const Napi::CallbackInfo& info) {
 #ifdef __APPLE__
     mpv_set_window_size(id, width, height);
 #elif defined(_WIN32)
-    // Windows 使用 wid 方式，MPV 会自动适应窗口大小
-    // 但可以通过设置属性来触发更新，确保视频正确缩放
-    std::lock_guard<std::mutex> lock(instancesMutex);
-    auto it = instances.find(id);
-    if (it != instances.end() && it->second->ctx && it->second->running) {
-        mpv_handle* ctx = it->second->ctx;
-        // 通过设置 window-scale 属性来触发窗口大小更新
-        // 这会强制 MPV 重新计算窗口大小
+    // Windows 使用 wid 方式，MPV 会自动适应窗口大小；通过 window-scale + show-text 触发重绘。
+    // 注意：show-text 为权宜之计，因 mpv 无专用“刷新视口”API，若后续版本提供更好方式可替换。
+    withInstanceIf(id, [](MPVInstance* inst) {
+        if (!inst->running) return;
+        mpv_handle* ctx = inst->ctx;
         double scale = 1.0;
         mpv_set_property(ctx, "window-scale", MPV_FORMAT_DOUBLE, &scale);
-        // 也可以尝试触发重绘
         const char* cmd[] = { "show-text", " ", NULL };
         mpv_command(ctx, cmd);
-    }
+    });
 #endif
     
     return env.Undefined();
@@ -347,14 +364,7 @@ Napi::Value SetForceBlackMode(const Napi::CallbackInfo& info) {
     int64_t id = info[0].As<Napi::Number>().Int64Value();
     bool enabled = info[1].As<Napi::Boolean>().Value();
     
-    {
-        std::lock_guard<std::mutex> lock(instancesMutex);
-        auto it = instances.find(id);
-        if (it == instances.end() || !it->second->ctx) {
-            Napi::Error::New(env, "Invalid mpv instance").ThrowAsJavaScriptException();
-            return env.Null();
-        }
-    }
+    if (!withInstance(env, id, [](MPVInstance*) {})) return env.Null();
     
 #ifdef __APPLE__
     mpv_set_force_black_mode(id, enabled ? 1 : 0);
@@ -378,12 +388,7 @@ Napi::Value SetHdrMode(const Napi::CallbackInfo& info) {
     int64_t id = info[0].As<Napi::Number>().Int64Value();
     bool enabled = info[1].As<Napi::Boolean>().Value();
     
-    std::lock_guard<std::mutex> lock(instancesMutex);
-    auto it = instances.find(id);
-    if (it == instances.end() || !it->second->ctx) {
-        Napi::Error::New(env, "Invalid mpv instance").ThrowAsJavaScriptException();
-        return env.Null();
-    }
+    if (!withInstance(env, id, [](MPVInstance*) {})) return env.Null();
     
 #ifdef __APPLE__
     mpv_set_hdr_mode(id, enabled ? 1 : 0);
@@ -408,12 +413,7 @@ Napi::Value SetJsDrivenRenderMode(const Napi::CallbackInfo& info) {
     int64_t id = info[0].As<Napi::Number>().Int64Value();
     bool enabled = info[1].As<Napi::Boolean>().Value();
     
-    std::lock_guard<std::mutex> lock(instancesMutex);
-    auto it = instances.find(id);
-    if (it == instances.end() || !it->second->ctx) {
-        Napi::Error::New(env, "Invalid mpv instance").ThrowAsJavaScriptException();
-        return env.Null();
-    }
+    if (!withInstance(env, id, [](MPVInstance*) {})) return env.Null();
     
 #ifdef __APPLE__
     mpv_set_js_driven_render_mode(id, enabled ? 1 : 0);
@@ -435,12 +435,7 @@ Napi::Value GetJsDrivenRenderMode(const Napi::CallbackInfo& info) {
     
     int64_t id = info[0].As<Napi::Number>().Int64Value();
     
-    std::lock_guard<std::mutex> lock(instancesMutex);
-    auto it = instances.find(id);
-    if (it == instances.end() || !it->second->ctx) {
-        Napi::Error::New(env, "Invalid mpv instance").ThrowAsJavaScriptException();
-        return env.Null();
-    }
+    if (!withInstance(env, id, [](MPVInstance*) {})) return env.Null();
     
 #ifdef __APPLE__
     int enabled = mpv_get_js_driven_render_mode(id);
@@ -462,12 +457,7 @@ Napi::Value RequestRender(const Napi::CallbackInfo& info) {
     
     int64_t id = info[0].As<Napi::Number>().Int64Value();
     
-    std::lock_guard<std::mutex> lock(instancesMutex);
-    auto it = instances.find(id);
-    if (it == instances.end() || !it->second->ctx) {
-        Napi::Error::New(env, "Invalid mpv instance").ThrowAsJavaScriptException();
-        return env.Null();
-    }
+    if (!withInstance(env, id, [](MPVInstance*) {})) return env.Null();
     
 #ifdef __APPLE__
     mpv_request_render(id);
@@ -489,14 +479,7 @@ Napi::Value DebugHdrStatus(const Napi::CallbackInfo& info) {
 
     int64_t id = info[0].As<Napi::Number>().Int64Value();
 
-    {
-        std::lock_guard<std::mutex> lock(instancesMutex);
-        auto it = instances.find(id);
-        if (it == instances.end() || !it->second->ctx) {
-            Napi::Error::New(env, "Invalid mpv instance").ThrowAsJavaScriptException();
-            return env.Null();
-        }
-    }
+    if (!withInstance(env, id, [](MPVInstance*) {})) return env.Null();
 
 #ifdef __APPLE__
     mpv_debug_hdr_status(id);
@@ -558,40 +541,32 @@ Napi::Value Initialize(const Napi::CallbackInfo& info) {
     
     int64_t id = info[0].As<Napi::Number>().Int64Value();
     
-    std::lock_guard<std::mutex> lock(instancesMutex);
-    auto it = instances.find(id);
-    if (it == instances.end() || !it->second->ctx) {
-        Napi::Error::New(env, "Invalid mpv instance").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-    
-    MPVInstance* instance = it->second;
-    if (instance->running) {
-        Napi::Error::New(env, "MPV instance already initialized").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-    
-    int err = mpv_initialize(instance->ctx);
-    if (err < 0) {
-        Napi::Error::New(env, std::string("Failed to initialize mpv: ") + mpv_error_string(err))
-            .ThrowAsJavaScriptException();
-        return env.Null();
-    }
-    
-    // Request info level logs to see debug messages (can use "v" for verbose)
-    mpv_request_log_messages(instance->ctx, "v");
-    
-    mpv_observe_property(instance->ctx, 0, "pause", MPV_FORMAT_FLAG);
-    mpv_observe_property(instance->ctx, 0, "time-pos", MPV_FORMAT_DOUBLE);
-    mpv_observe_property(instance->ctx, 0, "duration", MPV_FORMAT_DOUBLE);
-    mpv_observe_property(instance->ctx, 0, "volume", MPV_FORMAT_DOUBLE);
-    mpv_observe_property(instance->ctx, 0, "core-idle", MPV_FORMAT_FLAG);
-    mpv_observe_property(instance->ctx, 0, "idle-active", MPV_FORMAT_FLAG);
-    mpv_observe_property(instance->ctx, 0, "paused-for-cache", MPV_FORMAT_FLAG);
-    mpv_observe_property(instance->ctx, 0, "cache-buffering-state", MPV_FORMAT_INT64);
-    mpv_observe_property(instance->ctx, 0, "estimated-vf-fps", MPV_FORMAT_DOUBLE);
-    
-    instance->running = true;
+    bool success = false;
+    if (!withInstance(env, id, [&](MPVInstance* instance) {
+        if (instance->running) {
+            Napi::Error::New(env, "MPV instance already initialized").ThrowAsJavaScriptException();
+            return;
+        }
+        int err = mpv_initialize(instance->ctx);
+        if (err < 0) {
+            Napi::Error::New(env, std::string("Failed to initialize mpv: ") + mpv_error_string(err))
+                .ThrowAsJavaScriptException();
+            return;
+        }
+        mpv_request_log_messages(instance->ctx, "v");
+        mpv_observe_property(instance->ctx, 0, "pause", MPV_FORMAT_FLAG);
+        mpv_observe_property(instance->ctx, 0, "time-pos", MPV_FORMAT_DOUBLE);
+        mpv_observe_property(instance->ctx, 0, "duration", MPV_FORMAT_DOUBLE);
+        mpv_observe_property(instance->ctx, 0, "volume", MPV_FORMAT_DOUBLE);
+        mpv_observe_property(instance->ctx, 0, "core-idle", MPV_FORMAT_FLAG);
+        mpv_observe_property(instance->ctx, 0, "idle-active", MPV_FORMAT_FLAG);
+        mpv_observe_property(instance->ctx, 0, "paused-for-cache", MPV_FORMAT_FLAG);
+        mpv_observe_property(instance->ctx, 0, "cache-buffering-state", MPV_FORMAT_INT64);
+        mpv_observe_property(instance->ctx, 0, "estimated-vf-fps", MPV_FORMAT_DOUBLE);
+        instance->running = true;
+        success = true;
+    })) return env.Null();
+    if (!success) return env.Null();
     
     return Napi::Boolean::New(env, true);
 }
@@ -609,43 +584,36 @@ Napi::Value SetOption(const Napi::CallbackInfo& info) {
     int64_t id = info[0].As<Napi::Number>().Int64Value();
     std::string name = info[1].As<Napi::String>().Utf8Value();
     
-    std::lock_guard<std::mutex> lock(instancesMutex);
-    auto it = instances.find(id);
-    if (it == instances.end() || !it->second->ctx) {
-        Napi::Error::New(env, "Invalid mpv instance").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-    
-    // 选项只能在初始化前设置
-    if (it->second->running) {
-        Napi::Error::New(env, "Options can only be set before initialization")
-            .ThrowAsJavaScriptException();
-        return env.Null();
-    }
-    
-    mpv_handle* ctx = it->second->ctx;
-    int err;
-    
-    if (info[2].IsString()) {
-        std::string value = info[2].As<Napi::String>().Utf8Value();
-        err = mpv_set_option_string(ctx, name.c_str(), value.c_str());
-    } else if (info[2].IsNumber()) {
-        int64_t value = info[2].As<Napi::Number>().Int64Value();
-        err = mpv_set_option(ctx, name.c_str(), MPV_FORMAT_INT64, &value);
-    } else if (info[2].IsBoolean()) {
-        int flag = info[2].As<Napi::Boolean>().Value() ? 1 : 0;
-        err = mpv_set_option(ctx, name.c_str(), MPV_FORMAT_FLAG, &flag);
-    } else {
-        Napi::TypeError::New(env, "Unsupported value type").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-    
+    int err = 0;
+    bool done = false;
+    if (!withInstance(env, id, [&](MPVInstance* inst) {
+        if (inst->running) {
+            Napi::Error::New(env, "Options can only be set before initialization")
+                .ThrowAsJavaScriptException();
+            return;
+        }
+        mpv_handle* ctx = inst->ctx;
+        if (info[2].IsString()) {
+            std::string value = info[2].As<Napi::String>().Utf8Value();
+            err = mpv_set_option_string(ctx, name.c_str(), value.c_str());
+        } else if (info[2].IsNumber()) {
+            int64_t value = info[2].As<Napi::Number>().Int64Value();
+            err = mpv_set_option(ctx, name.c_str(), MPV_FORMAT_INT64, &value);
+        } else if (info[2].IsBoolean()) {
+            int flag = info[2].As<Napi::Boolean>().Value() ? 1 : 0;
+            err = mpv_set_option(ctx, name.c_str(), MPV_FORMAT_FLAG, &flag);
+        } else {
+            Napi::TypeError::New(env, "Unsupported value type").ThrowAsJavaScriptException();
+            return;
+        }
+        done = true;
+    })) return env.Null();
+    if (!done) return env.Null();
     if (err < 0) {
         Napi::Error::New(env, std::string("Failed to set option: ") + mpv_error_string(err))
             .ThrowAsJavaScriptException();
         return env.Null();
     }
-    
     return Napi::Boolean::New(env, true);
 }
 
@@ -662,28 +630,15 @@ Napi::Value SetWindowId(const Napi::CallbackInfo& info) {
     int64_t id = info[0].As<Napi::Number>().Int64Value();
     int64_t windowId = info[1].As<Napi::Number>().Int64Value();
     
-    std::lock_guard<std::mutex> lock(instancesMutex);
-    auto it = instances.find(id);
-    if (it == instances.end() || !it->second->ctx) {
-        Napi::Error::New(env, "Invalid mpv instance").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-    
-    mpv_handle* ctx = it->second->ctx;
-    
-    // 在 Windows 上，wid 必须是有效的 HWND
-    // 注意：wid 必须在 mpv_initialize() 之前设置
-    int err = mpv_set_option(ctx, "wid", MPV_FORMAT_INT64, &windowId);
-    
+    int err = -1;
+    if (!withInstance(env, id, [&](MPVInstance* inst) {
+        err = mpv_set_option(inst->ctx, "wid", MPV_FORMAT_INT64, &windowId);
+    })) return env.Null();
     if (err < 0) {
-        std::string errorMsg = std::string("Failed to set window ID (wid): ") + mpv_error_string(err);
-        std::cerr << "[binding] SetWindowId error: " << errorMsg << " (HWND: " << windowId << ")" << std::endl;
-        Napi::Error::New(env, errorMsg)
+        Napi::Error::New(env, std::string("Failed to set window ID (wid): ") + mpv_error_string(err))
             .ThrowAsJavaScriptException();
         return env.Null();
     }
-    
-    std::cerr << "[binding] SetWindowId success: wid=" << windowId << std::endl;
     return Napi::Boolean::New(env, true);
 }
 
@@ -700,23 +655,16 @@ Napi::Value LoadFile(const Napi::CallbackInfo& info) {
     int64_t id = info[0].As<Napi::Number>().Int64Value();
     std::string path = info[1].As<Napi::String>().Utf8Value();
     
-    std::lock_guard<std::mutex> lock(instancesMutex);
-    auto it = instances.find(id);
-    if (it == instances.end() || !it->second->ctx) {
-        Napi::Error::New(env, "Invalid mpv instance").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-    
-    mpv_handle* ctx = it->second->ctx;
-    const char* args[] = {"loadfile", path.c_str(), "replace", nullptr};
-    int err = mpv_command(ctx, args);
-    
+    int err = -1;
+    if (!withInstance(env, id, [&](MPVInstance* inst) {
+        const char* args[] = {"loadfile", path.c_str(), "replace", nullptr};
+        err = mpv_command(inst->ctx, args);
+    })) return env.Null();
     if (err < 0) {
         Napi::Error::New(env, std::string("Failed to load file: ") + mpv_error_string(err))
             .ThrowAsJavaScriptException();
         return env.Null();
     }
-    
     return Napi::Boolean::New(env, true);
 }
 
@@ -733,42 +681,31 @@ Napi::Value GetProperty(const Napi::CallbackInfo& info) {
     int64_t id = info[0].As<Napi::Number>().Int64Value();
     std::string name = info[1].As<Napi::String>().Utf8Value();
     
-    std::lock_guard<std::mutex> lock(instancesMutex);
-    auto it = instances.find(id);
-    if (it == instances.end() || !it->second->ctx) {
-        Napi::Error::New(env, "Invalid mpv instance").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-    
-    mpv_handle* ctx = it->second->ctx;
-    
-    // 尝试获取字符串属性
-    char* result = mpv_get_property_string(ctx, name.c_str());
-    if (result) {
-        Napi::String str = Napi::String::New(env, result);
-        mpv_free(result);
-        return str;
-    }
-    
-    // 尝试获取数字属性
-    int64_t intValue;
-    if (mpv_get_property(ctx, name.c_str(), MPV_FORMAT_INT64, &intValue) >= 0) {
-        return Napi::Number::New(env, intValue);
-    }
-    
-    // 尝试获取浮点数属性
-    double doubleValue;
-    if (mpv_get_property(ctx, name.c_str(), MPV_FORMAT_DOUBLE, &doubleValue) >= 0) {
-        return Napi::Number::New(env, doubleValue);
-    }
-    
-    // 尝试获取布尔属性
-    int flag;
-    if (mpv_get_property(ctx, name.c_str(), MPV_FORMAT_FLAG, &flag) >= 0) {
-        return Napi::Boolean::New(env, flag != 0);
-    }
-    
-    return env.Null();
+    Napi::Value out = env.Null();
+    if (!withInstance(env, id, [&](MPVInstance* inst) {
+        mpv_handle* ctx = inst->ctx;
+        char* result = mpv_get_property_string(ctx, name.c_str());
+        if (result) {
+            out = Napi::String::New(env, result);
+            mpv_free(result);
+            return;
+        }
+        int64_t intValue;
+        if (mpv_get_property(ctx, name.c_str(), MPV_FORMAT_INT64, &intValue) >= 0) {
+            out = Napi::Number::New(env, intValue);
+            return;
+        }
+        double doubleValue;
+        if (mpv_get_property(ctx, name.c_str(), MPV_FORMAT_DOUBLE, &doubleValue) >= 0) {
+            out = Napi::Number::New(env, doubleValue);
+            return;
+        }
+        int flag;
+        if (mpv_get_property(ctx, name.c_str(), MPV_FORMAT_FLAG, &flag) >= 0) {
+            out = Napi::Boolean::New(env, flag != 0);
+        }
+    })) return env.Null();
+    return out;
 }
 
 // 设置属性
@@ -784,36 +721,31 @@ Napi::Value SetProperty(const Napi::CallbackInfo& info) {
     int64_t id = info[0].As<Napi::Number>().Int64Value();
     std::string name = info[1].As<Napi::String>().Utf8Value();
     
-    std::lock_guard<std::mutex> lock(instancesMutex);
-    auto it = instances.find(id);
-    if (it == instances.end() || !it->second->ctx) {
-        Napi::Error::New(env, "Invalid mpv instance").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-    
-    mpv_handle* ctx = it->second->ctx;
-    int err;
-    
-    if (info[2].IsString()) {
-        std::string value = info[2].As<Napi::String>().Utf8Value();
-        err = mpv_set_property_string(ctx, name.c_str(), value.c_str());
-    } else if (info[2].IsNumber()) {
-        double value = info[2].As<Napi::Number>().DoubleValue();
-        err = mpv_set_property(ctx, name.c_str(), MPV_FORMAT_DOUBLE, &value);
-    } else if (info[2].IsBoolean()) {
-        int flag = info[2].As<Napi::Boolean>().Value() ? 1 : 0;
-        err = mpv_set_property(ctx, name.c_str(), MPV_FORMAT_FLAG, &flag);
-    } else {
-        Napi::TypeError::New(env, "Unsupported value type").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-    
+    int err = 0;
+    bool done = false;
+    if (!withInstance(env, id, [&](MPVInstance* inst) {
+        mpv_handle* ctx = inst->ctx;
+        if (info[2].IsString()) {
+            std::string value = info[2].As<Napi::String>().Utf8Value();
+            err = mpv_set_property_string(ctx, name.c_str(), value.c_str());
+        } else if (info[2].IsNumber()) {
+            double value = info[2].As<Napi::Number>().DoubleValue();
+            err = mpv_set_property(ctx, name.c_str(), MPV_FORMAT_DOUBLE, &value);
+        } else if (info[2].IsBoolean()) {
+            int flag = info[2].As<Napi::Boolean>().Value() ? 1 : 0;
+            err = mpv_set_property(ctx, name.c_str(), MPV_FORMAT_FLAG, &flag);
+        } else {
+            Napi::TypeError::New(env, "Unsupported value type").ThrowAsJavaScriptException();
+            return;
+        }
+        done = true;
+    })) return env.Null();
+    if (!done) return env.Null();
     if (err < 0) {
         Napi::Error::New(env, std::string("Failed to set property: ") + mpv_error_string(err))
             .ThrowAsJavaScriptException();
         return env.Null();
     }
-    
     return Napi::Boolean::New(env, true);
 }
 
@@ -830,38 +762,28 @@ Napi::Value Command(const Napi::CallbackInfo& info) {
     int64_t id = info[0].As<Napi::Number>().Int64Value();
     Napi::Array arr = info[1].As<Napi::Array>();
     
-    std::lock_guard<std::mutex> lock(instancesMutex);
-    auto it = instances.find(id);
-    if (it == instances.end() || !it->second->ctx) {
-        Napi::Error::New(env, "Invalid mpv instance").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-    
-    mpv_handle* ctx = it->second->ctx;
-    
     std::vector<std::string> args;
-    std::vector<const char*> cArgs;
-    
     for (uint32_t i = 0; i < arr.Length(); i++) {
         Napi::Value val = arr[i];
         if (val.IsString()) {
             args.push_back(val.As<Napi::String>().Utf8Value());
         }
     }
-    
+    std::vector<const char*> cArgs;
     for (const auto& arg : args) {
         cArgs.push_back(arg.c_str());
     }
     cArgs.push_back(nullptr);
     
-    int err = mpv_command(ctx, cArgs.data());
-    
+    int err = -1;
+    if (!withInstance(env, id, [&](MPVInstance* inst) {
+        err = mpv_command(inst->ctx, cArgs.data());
+    })) return env.Null();
     if (err < 0) {
         Napi::Error::New(env, std::string("Command failed: ") + mpv_error_string(err))
             .ThrowAsJavaScriptException();
         return env.Null();
     }
-    
     return Napi::Boolean::New(env, true);
 }
 
@@ -878,36 +800,24 @@ Napi::Value SetEventCallback(const Napi::CallbackInfo& info) {
     int64_t id = info[0].As<Napi::Number>().Int64Value();
     Napi::Function callback = info[1].As<Napi::Function>();
     
-    std::lock_guard<std::mutex> lock(instancesMutex);
-    auto it = instances.find(id);
-    if (it == instances.end() || !it->second->ctx) {
-        Napi::Error::New(env, "Invalid mpv instance").ThrowAsJavaScriptException();
-        return env.Null();
-    }
-    
-    MPVInstance* instance = it->second;
-    
-    // 如果已有回调，先释放
-    if (instance->hasTsfn) {
-        instance->tsfn.Release();
-        instance->hasTsfn = false;
-    }
-    
-    // 创建 ThreadSafeFunction
-    instance->tsfn = Napi::ThreadSafeFunction::New(
-        env,
-        callback,
-        "MPV Event Callback",
-        0,
-        1,
-        [](Napi::Env) {}
-    );
-    instance->hasTsfn = true;
-    
-    // 启动事件循环线程
-    if (!instance->eventThread.joinable()) {
-        instance->eventThread = std::thread(eventLoop, instance);
-    }
+    if (!withInstance(env, id, [&](MPVInstance* instance) {
+        if (instance->hasTsfn) {
+            instance->tsfn.Release();
+            instance->hasTsfn = false;
+        }
+        instance->tsfn = Napi::ThreadSafeFunction::New(
+            env,
+            callback,
+            "MPV Event Callback",
+            0,
+            1,
+            [](Napi::Env) {}
+        );
+        instance->hasTsfn = true;
+        if (!instance->eventThread.joinable()) {
+            instance->eventThread = std::thread(eventLoop, instance);
+        }
+    })) return env.Null();
     
     return Napi::Boolean::New(env, true);
 }
