@@ -7,15 +7,18 @@
 ## 🎯 核心接口概览
 
 ### 1. CorePlayer (核心播放器)
-**文件**: `src/main/corePlayer.ts:9-29`  
+**文件**: `src/main/application/core/corePlayer.ts`  
 **描述**: 应用程序的主要入口点，管理播放会话和窗口。
 
 ```typescript
 // 获取实例
-import { corePlayer } from './corePlayer'
+import { createCorePlayer } from './application/core/corePlayer'
+import { Media } from './domain/models/Media'
+
+const corePlayer = createCorePlayer()
 
 // 基本播放控制
-await corePlayer.play('/path/to/video.mp4')  // 播放视频
+await corePlayer.play(new Media('/path/to/video.mp4', 'video.mp4'), 0)  // 播放视频
 await corePlayer.pause()                     // 暂停
 await corePlayer.resume()                    // 继续播放
 await corePlayer.stop()                      // 停止播放
@@ -23,41 +26,49 @@ await corePlayer.seek(120)                   // 跳转到120秒
 await corePlayer.setVolume(75)               // 设置音量75%
 
 // 窗口管理
-corePlayer.setVideoWindow(window)            // 设置视频窗口
-corePlayer.setControlView(view)              // 设置控制视图（macOS）
-corePlayer.setControlWindow(window)          // 设置控制窗口（Windows）
+await corePlayer.setVideoWindow(window)      // 设置视频窗口
+await corePlayer.ensureMediaPlayerReadyForPlayback({ show: true, warmup: true }) // 准备播放器
 
 // 状态查询
-const state = corePlayer.getPlayerState()    // 获取当前状态
-corePlayer.onPlayerState(listener)           // 监听状态变化
-corePlayer.offPlayerState(listener)          // 移除监听器
+const status = corePlayer.getPlayerStatus()  // 获取当前状态
+corePlayer.on('player-status', listener)     // 监听状态变化
+corePlayer.off('player-status', listener)    // 移除监听器
 
-// 实用功能（向播放 UI 广播由 VideoPlayerApp.sendToPlaybackUIs / broadcastPlaylistUpdated 负责）
+// 实用功能
 await corePlayer.sendKey('SPACE')             // 发送按键
 await corePlayer.debugVideoState()            // 调试视频状态
 await corePlayer.debugHdrStatus()             // 调试HDR状态
 corePlayer.setHdrEnabled(true)                // 启用HDR
 await corePlayer.cleanup()                    // 清理资源
+
+// 会话管理
+const session = corePlayer.getCurrentSession() // 获取当前播放会话
 ```
 
 ### 2. LibMPVController (MPV控制器)
-**文件**: `src/main/libmpv.ts:88-872`  
+**文件**: `src/main/infrastructure/mpv/LibMPVController.ts`  
 **描述**: 业务逻辑层与原生绑定层之间的主要接口。
 
 ```typescript
-import { LibMPVController } from './libmpv'
+import { LibMPVController, isLibMPVAvailable } from './infrastructure/mpv/LibMPVController'
+
+// 检查libmpv是否可用
+if (!isLibMPVAvailable()) {
+  console.warn('libmpv native binding not available')
+}
 
 const controller = new LibMPVController()
 
 // 初始化与配置
-await controller.initialize()                 // 初始化MPV实例
-await controller.setWindowId(windowId)        // 设置窗口ID
+await controller.initialize(windowId)         // 初始化MPV实例（可选传入windowId）
+controller.setWindowId(windowId)              // 设置窗口ID
 await controller.setWindowSize(1920, 1080)    // 设置窗口尺寸
 
 // 播放控制
-await controller.loadFile('/path/to/video.mp4') // 加载文件
+await controller.loadFile('/path/to/video.mp4', 0) // 加载文件（可选指定起始时间）
 await controller.play()                       // 播放
 await controller.pause()                      // 暂停
+await controller.togglePause()                // 切换暂停/播放
 await controller.seek(150)                    // 跳转到150秒
 await controller.setVolume(80)                // 设置音量
 await controller.stop()                       // 停止
@@ -66,9 +77,11 @@ await controller.stop()                       // 停止
 const width = await controller.getProperty('width')      // 获取宽度
 await controller.setProperty('pause', true)              // 设置暂停
 await controller.command('set', 'pause', 'yes')          // 执行命令（更快）
+await controller.setOption('hwdec', 'auto-safe')         // 设置选项
 
 // 渲染控制 (macOS特定)
 controller.setJsDrivenRenderMode(true)        // 启用JS驱动渲染模式
+const isJsDriven = controller.getJsDrivenRenderMode()   // 获取当前渲染模式
 controller.requestRender()                    // 请求渲染
 controller.setHdrEnabled(true)                // 启用HDR
 
@@ -79,13 +92,13 @@ await controller.destroy()                    // 销毁实例
 ```
 
 ### 3. RenderManager (渲染管理器)
-**文件**: `src/main/renderManager.ts:8-274`  
+**文件**: `src/main/infrastructure/rendering/renderManager.ts`  
 **描述**: 管理渲染循环和渲染决策。
 
 ```typescript
-import { RenderManager } from './renderManager'
+import { RenderManager } from './infrastructure/rendering/renderManager'
 
-const renderManager = new RenderManager(controller, () => state)
+const renderManager = new RenderManager(mediaPlayer, () => getPlayerStatus())
 
 // 生命周期
 renderManager.start()                         // 启动渲染循环
@@ -94,17 +107,18 @@ renderManager.isActive()                      // 检查是否激活
 renderManager.cleanup()                       // 清理资源
 
 // 配置
+renderManager.setMediaPlayer(mediaPlayer)     // 设置媒体播放器（动态更新）
 renderManager.updateFps(60)                   // 根据帧率更新渲染间隔
 renderManager.markSeekComplete()              // 标记Seek完成（需要渲染）
 renderManager.markResizeStart()               // 标记Resize开始
 ```
 
 ### 4. PlayerStateMachine (状态机)
-**文件**: `src/main/playerState.ts:20-111`  
+**文件**: `src/main/application/state/playerState.ts`  
 **描述**: 管理播放器状态，继承自 EventEmitter。
 
 ```typescript
-import { PlayerStateMachine } from './playerState'
+import { PlayerStateMachine } from './application/state/playerState'
 
 const stateMachine = new PlayerStateMachine()
 
@@ -112,7 +126,9 @@ const stateMachine = new PlayerStateMachine()
 const state = stateMachine.getState()         // 获取当前状态
 stateMachine.setPhase('playing')              // 设置播放阶段
 stateMachine.setError('播放失败')              // 设置错误状态
-stateMachine.updateFromStatus(mpvStatus)      // 从MPV状态更新
+stateMachine.updateFromStatus(playerStatus)   // 从播放器状态更新
+stateMachine.resetToIdle()                    // 重置到空闲状态
+stateMachine.setSwitching(true)               // 设置切换状态
 
 // 事件监听
 stateMachine.on('state', listener)            // 监听状态变化
@@ -123,11 +139,11 @@ stateMachine.off('state', listener)           // 移除监听器
 
 ## 📊 数据结构
 
-### 1. PlayerState (播放器状态)
+### 1. PlayerStatus (播放器状态)
 ```typescript
-interface PlayerState {
+interface PlayerStatus {
   phase: PlayerPhase        // 播放阶段
-  currentTime: number       // 当前时间（秒）
+  position: number          // 当前时间（秒）
   duration: number          // 总时长（秒）
   volume: number            // 音量（0-100）
   path: string | null       // 文件路径
@@ -135,6 +151,8 @@ interface PlayerState {
   isSeeking: boolean        // 是否跳转中
   isNetworkBuffering: boolean      // 网络缓冲中
   networkBufferingPercent: number  // 缓冲百分比
+  errorMessage?: string     // 错误消息
+  errorLogSnippet?: string[] // 错误日志片段
 }
 ```
 
@@ -157,10 +175,12 @@ interface MPVStatus {
   duration: number          // 视频总时长（秒）
   volume: number            // 音量（0-100）
   path: string | null       // 当前文件路径
-  phase?: PlayerPhase       // 播放阶段
-  isSeeking?: boolean       // 是否正在跳转
-  isNetworkBuffering?: boolean      // 是否网络缓冲
-  networkBufferingPercent?: number  // 网络缓冲百分比
+  phase: PlayerPhase        // 播放阶段
+  isSeeking: boolean        // 是否正在跳转
+  isNetworkBuffering: boolean      // 是否网络缓冲
+  networkBufferingPercent: number  // 网络缓冲百分比
+  errorMessage?: string     // 错误消息
+  errorLogSnippet?: string[] // 错误日志片段
 }
 ```
 
@@ -254,13 +274,13 @@ window.electronAPI.fileSystem.onMountPathsUpdated(({ mountPaths }) => { ... })
 
 | 消息通道 | 参数类型 | 描述 | 处理函数位置 |
 |---------|---------|------|------------|
-| `play-video` | `{name: string, path: string}` | 播放视频 | `ipcHandlers.ts:38` |
-| `control-pause` | 无 | 暂停播放 | `ipcHandlers.ts:58` |
-| `control-play` | 无 | 继续播放 | `ipcHandlers.ts:63` |
-| `control-seek` | `number` | 跳转到时间 | `ipcHandlers.ts:81` |
-| `control-volume` | `number` | 设置音量 | `ipcHandlers.ts:86` |
-| `control-hdr` | `boolean` | 设置HDR | `ipcHandlers.ts:90` |
-| `debug-hdr-status` | 无 | 调试HDR状态 | `ipcHandlers.ts:171` |
+| `play-video` | `{name: string, path: string}` | 播放视频 | `src/main/application/command/handlers/playbackHandlers.ts` |
+| `control-pause` | 无 | 暂停播放 | `src/main/application/command/handlers/playbackHandlers.ts` |
+| `control-play` | 无 | 继续播放 | `src/main/application/command/handlers/playbackHandlers.ts` |
+| `control-seek` | `number` | 跳转到时间 | `src/main/application/command/handlers/playbackHandlers.ts` |
+| `control-volume` | `number` | 设置音量 | `src/main/application/command/handlers/playbackHandlers.ts` |
+| `control-hdr` | `boolean` | 设置HDR | `src/main/application/command/handlers/playbackHandlers.ts` |
+| `debug-hdr-status` | 无 | 调试HDR状态 | `src/main/application/command/handlers/debugHandlers.ts` |
 
 ---
 
@@ -314,27 +334,35 @@ timeline.dispose()                        // 清理资源
 
 ### 基本播放流程
 ```typescript
-import { corePlayer } from './corePlayer'
+import { createCorePlayer } from './application/core/corePlayer'
+import { Media } from './domain/models/Media'
 
-// 1. 播放视频
-await corePlayer.play('/path/to/video.mp4')
+const corePlayer = createCorePlayer()
 
-// 2. 监听状态变化
-corePlayer.onPlayerState((state) => {
-  console.log('当前状态:', state.phase)
-  console.log('当前时间:', state.currentTime, '/', state.duration)
+// 1. 设置视频窗口
+await corePlayer.setVideoWindow(window)
+await corePlayer.ensureMediaPlayerReadyForPlayback({ show: true })
+
+// 2. 播放视频
+await corePlayer.play(new Media('/path/to/video.mp4', 'video.mp4'), 0)
+
+// 3. 监听状态变化
+corePlayer.on('player-status', (status) => {
+  console.log('当前状态:', status.phase)
+  console.log('当前时间:', status.position, '/', status.duration)
 })
 
-// 3. 控制播放
+// 4. 控制播放
 await corePlayer.pause()
 await corePlayer.seek(60)  // 跳转到1分钟
 await corePlayer.setVolume(80)
+await corePlayer.resume()
 
-// 4. 调试
+// 5. 调试
 await corePlayer.debugVideoState()
 await corePlayer.debugHdrStatus()
 
-// 5. 清理
+// 6. 清理
 await corePlayer.cleanup()
 ```
 
@@ -344,33 +372,35 @@ await corePlayer.cleanup()
 // Vue组件示例
 import { onMounted, onUnmounted, ref } from 'vue'
 
-const playerState = ref(null)
+const playerStatus = ref(null)
 
 onMounted(() => {
   // 监听播放器状态
-  window.electronAPI.on('player-status', (status) => {
+  window.electronAPI.player.onStatus((status) => {
     playerStatus.value = status
   })
 })
 
 onUnmounted(() => {
-  window.electronAPI.removeListener('player-status')
+  // 清理监听器
+  // 注意：具体清理方式取决于preload.ts中的实现
 })
 
 // 控制播放
 function playVideo(path: string) {
-  window.electronAPI.send('play-video', { 
+  window.electronAPI.player.playMedia({ 
     name: path.split('/').pop(), 
-    path 
+    path, 
+    startTime: 0 
   })
 }
 
 function pauseVideo() {
-  window.electronAPI.send('control-pause')
+  window.electronAPI.player.pause()
 }
 
 function seekTo(time: number) {
-  window.electronAPI.send('control-seek', time)
+  window.electronAPI.player.seek(time)
 }
 </script>
 ```
@@ -454,18 +484,20 @@ controller.on('status', (status) => {
 ### 版本兼容性
 | API | 引入版本 | 状态 | 备注 |
 |-----|---------|------|------|
-| `corePlayer.play()` | v1.0 | ✅ 稳定 | 基础播放功能 |
+| `createCorePlayer()` | v1.0 | ✅ 稳定 | 核心播放器工厂 |
+| `corePlayer.play(Media)` | v1.0 | ✅ 稳定 | 基础播放功能 |
 | `setJsDrivenRenderMode()` | v1.2 | ✅ 稳定 | macOS优化 |
 | `setHdrEnabled()` | v1.3 | ✅ 稳定 | HDR支持 |
 | `debugHdrStatus()` | v1.4 | ✅ 稳定 | 调试工具 |
+| `ensureMediaPlayerReadyForPlayback()` | v1.5 | ✅ 稳定 | 播放器准备 |
 
 ### 平台支持
 | API | macOS | Windows | Linux |
 |-----|-------|---------|-------|
 | `setJsDrivenRenderMode()` | ✅ | ❌ | ❌ |
 | `requestRender()` | ✅ | ❌ | ❌ |
-| `setControlView()` | ✅ | ❌ | ❌ |
-| `setControlWindow()` | ❌ | ✅ | ❌ |
+| `setHdrEnabled()` | ✅ | ❌ | ❌ |
+| `ensureMediaPlayerReadyForPlayback()` | ✅ | ✅ | ❌ |
 
 ---
 
@@ -482,6 +514,7 @@ controller.on('status', (status) => {
 
 | 日期 | 更新内容 |
 |------|---------|
+| 2026-02-05 | 更新API文档以匹配实际代码实现，修正文件路径和方法签名 |
 | 2026-01-25 | 创建API快速参考手册 |
 | 2026-01-21 | 基于ARCHITECTURE.md v1.0提取核心API |
 
