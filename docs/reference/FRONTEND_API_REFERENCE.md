@@ -1,7 +1,7 @@
 # 前端 API 参考手册
 
 > **最后更新**: 2026-02-05  
-> **状态**: 待执行
+> **状态**: 生产就绪
 
 ## 🎯 统一前端 SDK 设计
 
@@ -52,7 +52,12 @@ class VideoPlayerSDK {
 
 ### 2. 环境检测与适配
 
-SDK 会自动检测当前运行环境，并适配相应的功能。
+SDK 会自动检测当前运行环境，并适配相应的功能：
+
+- **Electron 环境**：使用 `window.electronAPI.player` 作为底层实现
+- **Web 环境**：使用 Web API 实现
+
+**架构设计**：前端 `VideoPlayerSDK` 作为统一接口层，在 Electron 环境中会引用底层的 `electronAPI.player` 实现，提供一致的开发体验。
 
 ### 3. 核心模块
 

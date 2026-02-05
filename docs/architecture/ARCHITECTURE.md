@@ -40,7 +40,9 @@ flowchart TB
         direction TB
         UI_Vue[UI Components]:::ui
         UI_State[UI State & Logic]:::ui
+        UI_SDK["VideoPlayerSDK<br/>(Unified Frontend SDK)"]:::ui
         UI_Vue --> UI_State
+        UI_State --> UI_SDK
     end
 
     subgraph CommLayer ["Communication Layer"]
@@ -79,6 +81,7 @@ flowchart TB
 
     %% Flows
     UI_State <==>|JSON| IPC
+    UI_SDK <==>|JSON| IPC
     IPC ==>|Commands| App_Orch
     
     App_Orch --> App_WCreator
@@ -102,6 +105,7 @@ flowchart TB
 | Layer | Module | Responsibility |
 | :--- | :--- | :--- |
 | **UI** | `src/renderer` | User interaction, strictly "dumb" components driven by state from Main. |
+| **UI** | `VideoPlayerSDK` | **Unified Frontend SDK**. Provides consistent API for both Electron and Web platforms, abstracting away platform-specific details. |
 | **Command** | `ipcHandlers` | **Router**. Exposes typed APIs (player, nas, fileSystem) and dispatches to Application Layer. |
 | **Application** | `VideoPlayerApp` | **Orchestrator**. Manages Windows, Playlist, Config, and high-level user intents. |
 | **Core** | `CorePlayer` | **Engine Facade**. Manages the lifecycle of the playback engine and state machine. |
@@ -512,13 +516,127 @@ The scheduler employs a **State-Gated Serial Execution** strategy to ensure dete
 
 ---
 
-## 6. Window Management Strategy
+## 6. Frontend SDK Design
+
+The application features a unified frontend SDK (`VideoPlayerSDK`) that provides a consistent API for both Electron and Web platforms, abstracting away platform-specific implementation details.
+
+### 6.1 SDK Architecture
+
+```mermaid
+flowchart TD
+    subgraph FrontendSDK ["VideoPlayerSDK"]
+        direction TB
+        Core["Core SDK Methods"]
+        Platform["Platform Adapter"]
+        Playlist["Playlist Manager"]
+        VideoService["Video Service"]
+        State["State Management"]
+    end
+
+    subgraph Platforms ["Platform Implementations"]
+        Electron["Electron Platform<br/>(window.electronAPI.player)"]
+        Web["Web Platform<br/>(Standard Web API)"]
+    end
+
+    Core --> Platform
+    Core --> Playlist
+    Core --> VideoService
+    Core --> State
+    
+    Platform --> Electron
+    Platform --> Web
+    
+    classDef sdk fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#0d47a1
+    classDef platform fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#4a148c
+    
+    class Core,Playlist,VideoService,State sdk
+    class Electron,Web platform
+```
+
+### 6.2 Key Components
+
+| Component | Responsibility |
+| :--- | :--- |
+| **Core SDK Methods** | Unified API for playback control, including `play`, `pause`, `resume`, `stop`, `seek`, `setVolume`, `toggleFullscreen`, and `quit`. |
+| **Platform Adapter** | Detects runtime environment and routes calls to appropriate platform implementation. |
+| **Playlist Manager** | Manages video playlists with methods like `getPlaylist`, `addToPlaylist`, `removeFromPlaylist`, and `setPlaylist`. |
+| **Video Service** | Handles video-related operations like transcoding and metadata retrieval (internal use). |
+| **State Management** | Provides state change listeners and maintains consistent player state across platforms. |
+
+### 6.3 Platform Adaptation
+
+#### Electron Environment
+- **Implementation**: Uses `window.electronAPI.player` as the underlying implementation
+- **Integration**: SDK automatically detects Electron environment and routes calls to the native player implementation
+- **Features**: Full access to all Electron-specific capabilities, including window management and native rendering
+
+#### Web Environment
+- **Implementation**: Uses standard Web API (HTML5 video) for playback
+- **Integration**: SDK falls back to web implementation when Electron API is not available
+- **Features**: Core playback functionality with web-compatible features
+
+### 6.4 Integration Flow
+
+```mermaid
+sequenceDiagram
+    participant App as Frontend App
+    participant SDK as VideoPlayerSDK
+    participant Platform as Platform Adapter
+    participant ElectronAPI as window.electronAPI.player
+    participant WebAPI as Web Video API
+
+    App->>SDK: Initialize SDK
+    SDK->>Platform: Detect Environment
+    alt Electron Environment
+        Platform->>ElectronAPI: Check Availability
+        ElectronAPI-->>Platform: Available
+        Platform-->>SDK: Electron Environment Detected
+    else Web Environment
+        Platform->>WebAPI: Check Availability
+        WebAPI-->>Platform: Available
+        Platform-->>SDK: Web Environment Detected
+    end
+    SDK-->>App: SDK Initialized
+    
+    App->>SDK: play(video, { transcode: true })
+    SDK->>Platform: Route play request
+    alt Electron Environment
+        Platform->>ElectronAPI: playMedia(video)
+        ElectronAPI-->>Platform: Success
+    else Web Environment
+        Platform->>WebAPI: play(video)
+        WebAPI-->>Platform: Success
+    end
+    Platform-->>SDK: Playback Started
+    SDK-->>App: Promise Resolved
+```
+
+### 6.5 Key Benefits
+
+1. **Consistent Development Experience**
+   - Single API for both Electron and Web platforms
+   - Reduced code duplication and maintenance
+
+2. **Platform Flexibility**
+   - Seamless transition between Electron and Web environments
+   - Ability to develop and test web version independently
+
+3. **Future-Proofing**
+   - Easy to add support for new platforms
+   - Clear separation between platform-specific and platform-agnostic code
+
+4. **Enhanced Features**
+   - Built-in playlist management
+   - Transcode support with unified API
+   - Consistent state management
+
+## 7. Window Management Strategy
 
 To resolve the conflict between MPV's opaque rendering requirements and modern transparent UI design, the application employs a **Dual-Window Composition Strategy** on Windows.
 
 > **Detailed Design**: See [WINDOW_COMPOSITION_STRATEGY.md](../design/WINDOW_COMPOSITION_STRATEGY.md)
 
-### 6.1 Dual-Window Architecture (Windows)
+### 7.1 Dual-Window Architecture (Windows)
 
 ```mermaid
 graph TD
@@ -542,14 +660,14 @@ graph TD
 *   **VideoWindow (Bottom)**: Opaque, frameless, dedicated to MPV rendering via `wid` embedding. Ignores mouse events.
 *   **ControlWindow (Top)**: Transparent, frameless, hosts the Vue.js UI. Captures all user input and acts as the **Single Source of Truth** for window state.
 
-### 6.2 Synchronization
+### 7.2 Synchronization
 A `WindowSynchronizer` ensures the two windows move and resize in unison. It uses an **Event-Driven** approach with throttling to minimize IPC overhead, rather than a polling loop.
 
-### 6.3 Lifecycle & Fullscreen
+### 7.3 Lifecycle & Fullscreen
 Window states (Visible, Fullscreen, Minimized) are managed by a **Finite State Machine (WindowLifecycle)** to prevent illegal transitions.
 *   **Fullscreen Logic**: Prioritizes the `ControlWindow`'s physical state. Includes a "Forced Reset" mechanism to handle Windows-specific edge cases where the window exits fullscreen mode but fails to restore its original dimensions.
 
-### 6.4 Window Pooling Semantics
+### 7.4 Window Pooling Semantics
 
 The `WindowPool` optimizes startup and video-switch latency by **pre-creating** and **reusing** invisible `BrowserWindow` instances:
 
@@ -562,7 +680,7 @@ The `WindowPool` optimizes startup and video-switch latency by **pre-creating** 
 
 Window strategies are therefore the **single source of truth** for "what UI is loaded where", while `WindowPool` is purely responsible for lifecycle and reuse of the underlying `BrowserWindow` shells.
 
-## 7. Directory Structure Mapping
+## 8. Directory Structure Mapping
 
 ```mermaid
 graph LR
@@ -584,9 +702,9 @@ graph LR
     infra --> rendering[rendering]
 ```
 
-## 8. Development Guidelines
+## 9. Development Guidelines
 
-### 8.1 Modifying Architecture
+### 9.1 Modifying Architecture
 *   **Strict Layering**: Never import `VideoPlayerApp` into `CorePlayer`. Dependencies point down.
 *   **Interface First**: If changing `CorePlayer` functionality, update the `MediaPlayer` interface first if it affects the contract.
 *   **Single Source of Truth**: Update this document before merging any architectural changes.
