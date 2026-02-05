@@ -38,8 +38,11 @@ window.electronAPI.player.setVolume(75) // 设置音量75%
 // 切换全屏
 window.electronAPI.player.toggleFullscreen()
 
-// 设置HDR
-window.electronAPI.player.setHdr(true) // 启用HDR
+// 设置HDR 先搁置
+window.electronAPI.player.setHdr(true) // Mac 启用HDR
+
+// 彻底关闭 VideoPlayer（停止播放、关闭窗口、清理资源）
+window.electronAPI.player.quit()
 ```
 
 ### 窗口控制

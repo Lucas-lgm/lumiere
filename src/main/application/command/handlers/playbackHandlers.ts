@@ -104,4 +104,13 @@ export function setupPlaybackHandlers(videoPlayerApp: VideoPlayerApp, corePlayer
     undefined,
     IPC_CHANNELS.CONTROL_KEYPRESS
   ))
+
+  // 新增控制方法
+  ipcMain.on(IPC_CHANNELS.CONTROL_QUIT, createIpcHandler(
+    async () => {
+      await videoPlayerApp.quit()
+    },
+    undefined,
+    IPC_CHANNELS.CONTROL_QUIT
+  ))
 }

@@ -507,6 +507,38 @@ export class VideoPlayerApp {
     await this.corePlayer.sendKey(key)
   }
 
+  /**
+   * 主动关闭 VideoPlayer
+   * - 停止当前播放
+   * - 关闭视频窗口
+   * - 清理相关资源
+   * - 彻底退出视频播放器
+   */
+  async quit(): Promise<void> {
+    try {
+      // 停止播放
+      await this.corePlayer.stop()
+      
+      // 关闭窗口
+      if (this.windowController) {
+        this.windowController.handleWindowAction('close')
+        this.windowController = null
+      }
+      
+      // 清理状态
+      this.currentVideoPath = null
+      this.corePlayer.resetStatus()
+      
+      // 清空播放列表
+      this.playlist.clear()
+      
+      logger.info('VideoPlayer closed successfully')
+    } catch (error) {
+      logger.error('Error closing VideoPlayer', error)
+      throw error
+    }
+  }
+
   // ========== IPC 层调用的业务方法（封装业务逻辑，避免 ipcHandlers 包含业务） ==========
 
   /** 处理 play-video IPC：添加到列表（如不存在）、设为当前、播放、广播列表更新 */

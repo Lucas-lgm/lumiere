@@ -22,6 +22,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getPlaylist: () => ipcRenderer.send('get-playlist'),
     setPlaylist: (items: any[]) => ipcRenderer.send('set-playlist', items),
 
+    // 退出视频播放器
+    quit: () => ipcRenderer.send('control-quit'),
+
+
     // Events
     onCurrentVideoChanged: (callback: (data: any) => void) => {
       const subscription = (_: any, data: any) => callback(data)
