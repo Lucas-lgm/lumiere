@@ -80,7 +80,7 @@ flowchart TB
     end
 
     %% Flows
-    UI_State <==>|JSON| IPC
+    UI_State --> UI_SDK
     UI_SDK <==>|JSON| IPC
     IPC ==>|Commands| App_Orch
     
@@ -387,7 +387,8 @@ flowchart BT
     end
     
     subgraph "UI Boundary"
-        VPA -- "IPC Broadcast" --> Renderer[Vue UI]
+        VPA -- "IPC Broadcast" --> SDK[VideoPlayerSDK]
+        SDK -- "State Changes" --> Renderer[Vue UI]
     end
 ```
 
@@ -603,9 +604,16 @@ sequenceDiagram
     alt Electron Environment
         Platform->>ElectronAPI: playMedia(video)
         ElectronAPI-->>Platform: Success
+        
+        note over ElectronAPI,SDK: IPC 上报直接到达 SDK
+        ElectronAPI-->>SDK: State Updates (IPC)
+        SDK-->>App: State Changes
     else Web Environment
         Platform->>WebAPI: play(video)
         WebAPI-->>Platform: Success
+        
+        WebAPI-->>SDK: State Updates
+        SDK-->>App: State Changes
     end
     Platform-->>SDK: Playback Started
     SDK-->>App: Promise Resolved
