@@ -34,7 +34,9 @@ export class Playlist {
    */
   setCurrentByPath(path: string): void {
     const index = this.playlist.findIndex((item) => item.path === path);
+    console.log('pre index', path, this.currentIndex);
     this.currentIndex = index >= 0 ? index : -1;
+    console.log('current index', path, index, this.currentIndex);
   }
 
   /**
@@ -120,9 +122,25 @@ export class Playlist {
     const uniqueVideos = videos.filter((video, index, self) => 
       index === self.findIndex(v => v.path === video.path)
     );
+    
+    // 保存当前播放项的路径，以便后续恢复
+    let currentPath: string | null = null;
+    if (this.currentIndex >= 0 && this.currentIndex < this.playlist.length) {
+      currentPath = this.playlist[this.currentIndex].path;
+    }
+    
     this.playlist = uniqueVideos;
     this.originalPlaylist = [...uniqueVideos];
-    this.currentIndex = uniqueVideos.length > 0 ? 0 : -1;
+    
+    // 尝试找到与之前当前播放项路径相同的视频，保持当前播放项
+    let newIndex = -1;
+    if (currentPath) {
+      newIndex = uniqueVideos.findIndex(video => video.path === currentPath);
+    }
+    
+    // 如果找到匹配的视频，使用其索引；否则使用默认值
+    this.currentIndex = newIndex >= 0 ? newIndex : (uniqueVideos.length > 0 ? 0 : -1);
+    
     if (this.isShuffle) {
       this.updateShuffleMap();
     }

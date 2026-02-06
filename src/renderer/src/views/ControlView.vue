@@ -169,7 +169,7 @@ const currentTimeAdjustable = useAdjustableValue<number>({
   initial: 0,
   // 增加保护期到 1s，防止 seek 回弹闪烁
   justChangedWindowMs: 1000,
-  debugLabel: 'timeline',
+  // debugLabel: 'timeline',
   // 进度条目前只在松手时真正 seek，这里不在 input 阶段发送命令
   sendOnInput: false,
   sendCommand: (t: number) => {
@@ -243,7 +243,7 @@ const hdrEnabled = ref(true)
 // 音量采用通用可调值模式（短暂保护期）
 const volumeAdjustable = useAdjustableValue<number>({
   initial: 100,
-  debugLabel: 'volume',
+  // debugLabel: 'volume',
   // 音量希望拖动时实时生效，所以在 onUserInput 阶段就发送命令
   sendOnInput: true,
   sendCommand: (v: number) => {
@@ -319,7 +319,7 @@ const handlePlayVideo = (file: { name: string; path: string }) => {
 }
 
 const handlePlayerState = (status: PlayerStatusSnapshot) => {
-  console.log('status:', status)
+  // console.log('status:', status)
 
   // 简化逻辑：不再进行 isAdjusting 与 UI 交互状态的自我纠正
 
@@ -370,6 +370,11 @@ const handlePlayerState = (status: PlayerStatusSnapshot) => {
       currentTimeAdjustable.applyServerState(duration.value)
     }
     isPlaying.value = false
+    // 只有在之前是播放状态时才自动切换到下一个视频
+    // 这样可以避免多次调用 playNextFromPlaylist
+    if (wasPlaying) {
+      playNextFromPlaylist()
+    }
   }
   
   // 当跳转完成时（isSeeking 从 true 变为 false），重置 isScrubbing
@@ -399,7 +404,6 @@ const handlePlayerState = (status: PlayerStatusSnapshot) => {
   
   if (typeof status.volume === 'number') {
     // eslint-disable-next-line no-console
-    console.log('[ControlView] handlePlayerState volume from backend', status.volume)
     volumeAdjustable.applyServerState(status.volume)
   }
   if (typeof status.path === 'string') {
@@ -511,10 +515,7 @@ const playFromPlaylist = (item: PlaylistItem) => {
   // 2. 更新前端状态
   handlePlayVideo(item)
   
-  // 3. 同步播放列表到主进程（确保状态一致）
-  sdk.syncPlaylistToMain()
-  
-  // 4. 执行播放
+  // 3. 执行播放
   sdk.play({ name: item.name, path: item.path, startTime: item.startTime })
 }
 

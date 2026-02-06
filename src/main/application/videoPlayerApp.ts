@@ -145,9 +145,10 @@ export class VideoPlayerApp {
     const next = status.phase
     this.lastPlayerPhase = next
 
-    if (prev === 'playing' && next === 'ended') {
-      this.playNextFromPlaylist().catch(() => {})
-    }
+    // 自动切视频逻辑已移到前端处理
+    // if (prev === 'playing' && next === 'ended') {
+    //   this.playNextFromPlaylist().catch(() => {})
+    // }
   }
 
   /**
