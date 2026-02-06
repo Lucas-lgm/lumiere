@@ -342,7 +342,7 @@ const handleNasFilePlay = async (file: any) => {
   
   try {
     // 添加到播放列表
-    await sdk.addToPlaylist(video)
+    sdk.addToPlaylist(video)
     // 播放视频
     await sdk.play(video)
   } catch (error) {
@@ -451,7 +451,7 @@ const handlePlayVideo = async (video: MediaResource) => {
   
   try {
     // 添加到播放列表
-    await sdk.addToPlaylist(videoToPlay)
+    sdk.addToPlaylist(videoToPlay)
     // 播放视频
     await sdk.play(videoToPlay)
   } catch (error) {
@@ -483,18 +483,14 @@ const handleSettings = () => {
 }
 
 // 同步播放列表
-const syncPlaylist = async () => {
+const syncPlaylist = () => {
   const items = resources.value.map((resource) => ({
     id: resource.id,
     name: resource.name,
     path: resource.path,
     source: resource.source
   }))
-  try {
-    await sdk.setPlaylist(items)
-  } catch (error) {
-    console.error('同步播放列表失败:', error)
-  }
+  sdk.setPlaylist(items)
 }
 
 // 处理文件选择
@@ -621,7 +617,7 @@ onMounted(async () => {
   
   // 获取现有播放列表
   try {
-    const playlist = await sdk.getPlaylist()
+    const playlist = sdk.getPlaylist()
     // 将播放列表项转换为资源（如果还没有）
     playlist.forEach(item => {
       const existing = resources.value.find(r => r.path === item.path)

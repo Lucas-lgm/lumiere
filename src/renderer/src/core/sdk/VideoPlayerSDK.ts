@@ -88,7 +88,7 @@ export class VideoPlayerSDK {
   /**
    * 获取当前播放列表
    */
-  async getPlaylist(): Promise<PlaylistType> {
+  getPlaylist(): PlaylistType {
     return this.playlist.get();
   }
 
@@ -96,24 +96,24 @@ export class VideoPlayerSDK {
    * 添加视频到播放列表
    * @param video 视频对象
    */
-  async addToPlaylist(video: Media): Promise<void> {
-    return this.playlist.add(video);
+  addToPlaylist(video: Media): void {
+    this.playlist.add(video);
   }
 
   /**
    * 从播放列表移除视频
    * @param index 索引
    */
-  async removeFromPlaylist(index: number): Promise<void> {
-    return this.playlist.remove(index);
+  removeFromPlaylist(index: number): void {
+    this.playlist.remove(index);
   }
 
   /**
    * 设置整个播放列表
    * @param videos 视频对象数组
    */
-  async setPlaylist(videos: Media[]): Promise<void> {
-    return this.playlist.set(videos);
+  setPlaylist(videos: Media[]): void {
+    this.playlist.set(videos);
   }
 
   /**

@@ -16,7 +16,7 @@ export class Playlist {
   /**
    * 获取当前播放列表
    */
-  async get(): Promise<PlaylistType> {
+  get(): PlaylistType {
     return this.playlist;
   }
 
@@ -24,7 +24,7 @@ export class Playlist {
    * 添加视频到播放列表
    * @param video 视频对象
    */
-  async add(video: Media): Promise<void> {
+  add(video: Media): void {
     this.playlist.push(video);
   }
 
@@ -32,7 +32,7 @@ export class Playlist {
    * 从播放列表移除视频
    * @param index 索引
    */
-  async remove(index: number): Promise<void> {
+  remove(index: number): void {
     if (index >= 0 && index < this.playlist.length) {
       this.playlist.splice(index, 1);
     }
@@ -42,14 +42,14 @@ export class Playlist {
    * 设置整个播放列表
    * @param videos 视频对象数组
    */
-  async set(videos: Media[]): Promise<void> {
+  set(videos: Media[]): void {
     this.playlist = videos;
   }
 
   /**
    * 清空播放列表
    */
-  async clear(): Promise<void> {
+  clear(): void {
     this.playlist = [];
   }
 }
