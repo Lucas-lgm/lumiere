@@ -164,6 +164,8 @@ import { useAdjustableValue } from '../composables/useAdjustableValue'
 import { getPlayerSDK } from '../core/sdk'
 
 const isPlaying = ref(false)
+// 跟踪上一个播放状态，用于检测从 playing 到 ended 的转换
+let lastPlayerPhase: string = 'idle'
 // 进度条使用可调值模式（短暂保护期 + 正在拖动时本地优先）
 const currentTimeAdjustable = useAdjustableValue<number>({
   initial: 0,
@@ -370,12 +372,13 @@ const handlePlayerState = (status: PlayerStatusSnapshot) => {
       currentTimeAdjustable.applyServerState(duration.value)
     }
     isPlaying.value = false
-    // 只有在之前是播放状态时才自动切换到下一个视频
-    // 这样可以避免多次调用 playNextFromPlaylist
-    if (wasPlaying) {
+    if (lastPlayerPhase === 'playing' && status.phase === 'ended') {
       playNextFromPlaylist()
     }
   }
+  
+  // 更新上一个播放状态
+  lastPlayerPhase = status.phase || 'idle'
   
   // 当跳转完成时（isSeeking 从 true 变为 false），重置 isScrubbing
   if (wasSeeking && !isSeeking.value && isScrubbing.value) {
