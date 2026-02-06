@@ -145,7 +145,7 @@ export class SingleWindowStrategy extends EventEmitter implements WindowControll
     if (process.env.NODE_ENV === 'development') {
       const url = 'http://localhost:5173/#/control'
       this.controlView.webContents.loadURL(url).catch(() => {})
-      // this.controlView.webContents.openDevTools({ mode: 'detach' })
+      this.controlView.webContents.openDevTools({ mode: 'detach' })
     } else {
       this.controlView.webContents.loadFile(join(__dirname, '../renderer/index.html'), {
         hash: 'control'
