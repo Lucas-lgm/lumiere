@@ -93,11 +93,50 @@ export class VideoPlayerSDK {
   }
 
   /**
+   * 获取当前播放项（前端列表中的当前项）
+   */
+  getCurrentFromPlaylist(): Media | null {
+    return this.playlist.getCurrent();
+  }
+
+  /**
+   * 按路径设置当前播放项（播放/切换后调用以便下一首/上一首正确）
+   */
+  setPlaylistCurrentByPath(path: string): void {
+    this.playlist.setCurrentByPath(path);
+  }
+
+  /**
+   * 按索引设置当前播放项
+   */
+  setPlaylistCurrentByIndex(index: number): void {
+    this.playlist.setCurrentByIndex(index);
+  }
+
+  /**
+   * 获取下一首，用于切换视频后调用 play(next)
+   */
+  getNextFromPlaylist(): Media | null {
+    return this.playlist.getNext();
+  }
+
+  /**
+   * 获取上一首，用于切换视频后调用 play(prev)
+   */
+  getPrevFromPlaylist(): Media | null {
+    return this.playlist.getPrev();
+  }
+
+  /**
    * 添加视频到播放列表
    * @param video 视频对象
    */
   addToPlaylist(video: Media): void {
     this.playlist.add(video);
+    // 同步到主进程，确保跨窗口一致
+    if (this.isElectron) {
+      window.electronAPI.player.setPlaylist(this.playlist.get());
+    }
   }
 
   /**
@@ -106,6 +145,10 @@ export class VideoPlayerSDK {
    */
   removeFromPlaylist(index: number): void {
     this.playlist.remove(index);
+    // 同步到主进程，确保跨窗口一致
+    if (this.isElectron) {
+      window.electronAPI.player.setPlaylist(this.playlist.get());
+    }
   }
 
   /**
@@ -114,6 +157,85 @@ export class VideoPlayerSDK {
    */
   setPlaylist(videos: Media[]): void {
     this.playlist.set(videos);
+    // 同步到主进程，确保跨窗口一致
+    if (this.isElectron) {
+      window.electronAPI.player.setPlaylist(videos);
+    }
+  }
+
+  /**
+   * 清空播放列表
+   */
+  clearPlaylist(): void {
+    this.playlist.clear();
+    // 同步到主进程，确保跨窗口一致
+    if (this.isElectron) {
+      window.electronAPI.player.setPlaylist([]);
+    }
+  }
+
+  /**
+   * 同步播放列表到主进程
+   */
+  syncPlaylistToMain(): void {
+    if (this.isElectron) {
+      window.electronAPI.player.setPlaylist(this.playlist.get());
+    }
+  }
+
+  /**
+   * 切换循环模式
+   * @returns 当前循环模式状态
+   */
+  toggleLoop(): boolean {
+    return this.playlist.toggleLoop();
+  }
+
+  /**
+   * 切换随机播放模式
+   * @returns 当前随机播放模式状态
+   */
+  toggleShuffle(): boolean {
+    return this.playlist.toggleShuffle();
+  }
+
+  /**
+   * 获取循环模式状态
+   * @returns 循环模式状态
+   */
+  getLoop(): boolean {
+    return this.playlist.getLoop();
+  }
+
+  /**
+   * 获取随机播放模式状态
+   * @returns 随机播放模式状态
+   */
+  getShuffle(): boolean {
+    return this.playlist.getShuffle();
+  }
+
+  /**
+   * 移动播放列表项
+   * @param fromIndex 源索引
+   * @param toIndex 目标索引
+   * @returns 是否移动成功
+   */
+  movePlaylistItem(fromIndex: number, toIndex: number): boolean {
+    const success = this.playlist.moveItem(fromIndex, toIndex);
+    // 同步到主进程，确保跨窗口一致
+    if (success && this.isElectron) {
+      window.electronAPI.player.setPlaylist(this.playlist.get());
+    }
+    return success;
+  }
+
+  /**
+   * 获取播放列表长度
+   * @returns 播放列表长度
+   */
+  getPlaylistLength(): number {
+    return this.playlist.length;
   }
 
   /**
@@ -145,8 +267,20 @@ export class VideoPlayerSDK {
         this._notifyStateChange({ currentVideo: video });
       });
 
-      const cleanupPlaylist = window.electronAPI.player.onPlaylistUpdated((playlist: any) => {
-        this._notifyStateChange({ playlist });
+      // 监听主进程的播放列表更新，确保跨窗口同步
+      const cleanupPlaylist = window.electronAPI.player.onPlaylistUpdated((items: any[]) => {
+        if (items && items.length > 0) {
+          const mediaItems = items.map((item: any) => ({
+            name: item.name,
+            path: item.path,
+            startTime: item.startTime
+          }));
+          this.playlist.set(mediaItems);
+          this._notifyStateChange({ playlist: mediaItems });
+        } else {
+          this.playlist.clear();
+          this._notifyStateChange({ playlist: [] });
+        }
       });
 
       // 存储清理函数，以便在需要时调用
@@ -155,6 +289,29 @@ export class VideoPlayerSDK {
         cleanupCurrentVideo();
         cleanupPlaylist();
       };
+    }
+  }
+
+  /**
+   * 初始化 SDK
+   */
+  async init(): Promise<void> {
+    // 初始化时从主进程获取播放列表状态
+    if (this.isElectron) {
+      try {
+        const items = await window.electronAPI.player.getPlaylist();
+        if (items && items.length > 0) {
+          const mediaItems = items.map((item: any) => ({
+            name: item.name,
+            path: item.path,
+            startTime: item.startTime
+          }));
+          this.playlist.set(mediaItems);
+          this._notifyStateChange({ playlist: mediaItems });
+        }
+      } catch (error) {
+        console.error('Error initializing playlist:', error);
+      }
     }
   }
 

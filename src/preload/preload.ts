@@ -17,9 +17,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     windowAction: (action: 'close' | 'minimize' | 'maximize') => ipcRenderer.send('control-window-action', action),
 
     // Playlist
-    playNext: () => ipcRenderer.send('play-playlist-next'),
-    playPrev: () => ipcRenderer.send('play-playlist-prev'),
-    getPlaylist: () => ipcRenderer.send('get-playlist'),
+    getPlaylist: () => {
+      return new Promise<any[]>((resolve) => {
+        const listener = (_: any, data: any[]) => {
+          ipcRenderer.removeListener('playlist-updated', listener);
+          resolve(data);
+        };
+        ipcRenderer.on('playlist-updated', listener);
+        ipcRenderer.send('get-playlist');
+      });
+    },
     setPlaylist: (items: any[]) => ipcRenderer.send('set-playlist', items),
 
     // 退出视频播放器

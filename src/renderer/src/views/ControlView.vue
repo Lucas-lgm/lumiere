@@ -56,13 +56,26 @@
           暂无播放列表
         </div>
         <div
-          v-for="item in playlist"
+          v-for="(item, index) in playlist"
           :key="item.path"
           :class="['playlist-item', { active: item.path === currentPath }]"
           @click="playFromPlaylist(item)"
+          draggable="true"
+          @dragstart="onDragStart($event, index)"
+          @dragover.prevent
+          @drop="onDrop($event, index)"
         >
-          <div class="playlist-item-name">{{ item.name }}</div>
-          <div class="playlist-item-path">{{ item.path }}</div>
+          <div class="playlist-item-content">
+            <div class="playlist-item-name">{{ item.name }}</div>
+            <div class="playlist-item-path">{{ item.path }}</div>
+          </div>
+          <button 
+            class="playlist-item-remove" 
+            @click.stop="removeFromPlaylist(index)"
+            title="从播放列表移除"
+          >
+            ×
+          </button>
         </div>
       </div>
     </div>
@@ -102,6 +115,12 @@
           </div>
           <div class="control-right">
             <button @click="togglePlaylist" class="btn-control" title="播放列表">📋</button>
+            <button @click="toggleLoop" class="btn-control" :title="sdk.getLoop() ? '关闭循环' : '开启循环'">
+              {{ sdk.getLoop() ? '🔁' : '➡️' }}
+            </button>
+            <button @click="toggleShuffle" class="btn-control" :title="sdk.getShuffle() ? '关闭随机' : '开启随机'">
+              {{ sdk.getShuffle() ? '🔀' : '▶️' }}
+            </button>
             <button
               v-if="!isWindows"
               @click="toggleHdr"
@@ -142,6 +161,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useControlBarAutoHide } from '../composables/useControlBarAutoHide'
 import { useAdjustableValue } from '../composables/useAdjustableValue'
+import { getPlayerSDK } from '../core/sdk'
 
 const isPlaying = ref(false)
 // 进度条使用可调值模式（短暂保护期 + 正在拖动时本地优先）
@@ -186,9 +206,38 @@ interface PlaylistItem {
   startTime?: number
 }
 
+const sdk = getPlayerSDK()
 const playlist = ref<PlaylistItem[]>([])
 const showPlaylist = ref(false)
 const currentPath = ref<string | null>(null)
+
+function refreshPlaylistFromSDK() {
+  playlist.value = sdk.getPlaylist().map((m) => ({
+    name: m.name,
+    path: m.path,
+    startTime: m.startTime
+  }))
+}
+
+// 从主进程获取播放列表状态，确保初始化时与其他窗口一致
+async function loadPlaylistFromMain() {
+  if (window.electronAPI) {
+    try {
+      const items = await window.electronAPI.player.getPlaylist();
+      if (items && items.length > 0) {
+        const mediaItems = items.map((item) => ({
+          name: item.name,
+          path: item.path,
+          startTime: item.startTime
+        }))
+        sdk.setPlaylist(mediaItems)
+        refreshPlaylistFromSDK()
+      }
+    } catch (error) {
+      console.error('Error loading playlist from main:', error);
+    }
+  }
+}
 const hdrEnabled = ref(true)
 
 // 音量采用通用可调值模式（短暂保护期）
@@ -300,6 +349,12 @@ const handlePlayerState = (status: PlayerStatusSnapshot) => {
   isVideoReady.value = 
     status.phase === 'playing' || 
     status.phase === 'paused'
+
+  // 前端控制播放列表，不需要从主进程同步当前项
+  // 但需要更新 currentPath 以保持 UI 显示一致
+  if (typeof status.path === 'string') {
+    currentPath.value = status.path
+  }
   
   // 使用 composable 处理播放状态变化
   handlePlayerStateChange(wasPlaying)
@@ -359,10 +414,6 @@ const handlePlayerState = (status: PlayerStatusSnapshot) => {
   }
 }
 
-const handlePlaylistUpdated = (items: PlaylistItem[]) => {
-  playlist.value = items
-}
-
 const formatTime = (seconds: number): string => {
   // 明确检查是否为 NaN 或 undefined/null，而不是使用 !seconds（因为 0 也是 falsy）
   if (seconds == null || isNaN(seconds)) return '00:00:00'
@@ -374,6 +425,52 @@ const formatTime = (seconds: number): string => {
 
 const togglePlaylist = () => {
   showPlaylist.value = !showPlaylist.value
+  if (showPlaylist.value) {
+    refreshPlaylistFromSDK()
+  }
+}
+
+const toggleLoop = () => {
+  const newState = sdk.toggleLoop()
+  console.log('Loop mode:', newState)
+}
+
+const toggleShuffle = () => {
+  const newState = sdk.toggleShuffle()
+  console.log('Shuffle mode:', newState)
+  // 刷新播放列表显示
+  if (showPlaylist.value) {
+    refreshPlaylistFromSDK()
+  }
+}
+
+const removeFromPlaylist = (index: number) => {
+  sdk.removeFromPlaylist(index)
+  refreshPlaylistFromSDK()
+}
+
+const movePlaylistItem = (fromIndex: number, toIndex: number) => {
+  const success = sdk.movePlaylistItem(fromIndex, toIndex)
+  if (success) {
+    refreshPlaylistFromSDK()
+  }
+}
+
+let draggedIndex: number | null = null
+
+const onDragStart = (event: DragEvent, index: number) => {
+  draggedIndex = index
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+  }
+}
+
+const onDrop = (event: DragEvent, targetIndex: number) => {
+  event.preventDefault()
+  if (draggedIndex !== null && draggedIndex !== targetIndex) {
+    movePlaylistItem(draggedIndex, targetIndex)
+  }
+  draggedIndex = null
 }
 
 const toggleFullscreen = () => {
@@ -405,34 +502,66 @@ const toggleHdr = () => {
 }
 
 const playFromPlaylist = (item: PlaylistItem) => {
-  if (window.electronAPI) {
-    window.electronAPI.player.playMedia({
-      name: item.name,
-      path: item.path,
-      // 将后端反推的起播时间传回主进程，用于记忆播放
-      startTime: item.startTime
-    })
-  }
+  // 前端完全控制视频切换逻辑
+  console.log('Playing from playlist:', item)
+  
+  // 1. 设置当前播放项
+  sdk.setPlaylistCurrentByPath(item.path)
+  
+  // 2. 更新前端状态
+  handlePlayVideo(item)
+  
+  // 3. 同步播放列表到主进程（确保状态一致）
+  sdk.syncPlaylistToMain()
+  
+  // 4. 执行播放
+  sdk.play({ name: item.name, path: item.path, startTime: item.startTime })
 }
 
 const togglePlayPause = () => {
   onUserInteraction()
-  // 不立即改变 isPlaying，等待主进程响应回来的状态
-  // 根据当前状态发送相反的命令
   if (window.electronAPI) {
     isPlaying.value ? window.electronAPI.player.pause() : window.electronAPI.player.resume()
   }
 }
 
 const playPrevFromPlaylist = () => {
-  if (window.electronAPI) {
-    window.electronAPI.player.playPrev()
+  // 前端完全控制上一首逻辑
+  const prev = sdk.getPrevFromPlaylist()
+  if (prev) {
+    console.log('Playing previous:', prev)
+    
+    // 1. 设置当前播放项
+    sdk.setPlaylistCurrentByPath(prev.path)
+    
+    // 2. 更新前端状态
+    handlePlayVideo(prev)
+    
+    // 3. 同步播放列表到主进程（确保状态一致）
+    sdk.syncPlaylistToMain()
+    
+    // 4. 执行播放
+    sdk.play(prev)
   }
 }
 
 const playNextFromPlaylist = () => {
-  if (window.electronAPI) {
-    window.electronAPI.player.playNext()
+  // 前端完全控制下一首逻辑
+  const next = sdk.getNextFromPlaylist()
+  if (next) {
+    console.log('Playing next:', next)
+    
+    // 1. 设置当前播放项
+    sdk.setPlaylistCurrentByPath(next.path)
+    
+    // 2. 更新前端状态
+    handlePlayVideo(next)
+    
+    // 3. 同步播放列表到主进程（确保状态一致）
+    sdk.syncPlaylistToMain()
+    
+    // 4. 执行播放
+    sdk.play(next)
   }
 }
 
@@ -513,14 +642,13 @@ const toggleMute = () => {
 
 const unsubs: (() => void)[] = []
 
-onMounted(() => {
+onMounted(async () => {
+  // 初始化时从主进程加载播放列表状态
+  await loadPlaylistFromMain()
+  
   if (window.electronAPI) {
-    // 当前播放条目变更通知（由主进程广播）
     unsubs.push(window.electronAPI.player.onCurrentVideoChanged(handlePlayVideo))
     unsubs.push(window.electronAPI.player.onStatus(handlePlayerState))
-    unsubs.push(window.electronAPI.player.onPlaylistUpdated(handlePlaylistUpdated))
-    
-    // 控制栏显示/隐藏 IPC 消息（macOS BrowserView 模式）
     unsubs.push(window.electronAPI.player.onControlBarShow(() => {
       showControls()
     }))
@@ -529,12 +657,24 @@ onMounted(() => {
         scheduleHide()
       }
     }))
-    // 立即隐藏控制栏（用于全屏切换等场景，避免渲染延迟）
     unsubs.push(window.electronAPI.player.onControlBarHideImmediate(() => {
       controlsVisible.value = false
     }))
-    
-    window.electronAPI.player.getPlaylist()
+    // 监听主进程的播放列表更新事件，确保跨窗口同步
+    unsubs.push(window.electronAPI.player.onPlaylistUpdated((items: any[]) => {
+      if (items && items.length > 0) {
+        const mediaItems = items.map((item) => ({
+          name: item.name,
+          path: item.path,
+          startTime: item.startTime
+        }))
+        sdk.setPlaylist(mediaItems)
+        refreshPlaylistFromSDK()
+      } else {
+        sdk.clearPlaylist()
+        refreshPlaylistFromSDK()
+      }
+    }))
   }
 })
 
@@ -751,6 +891,10 @@ onUnmounted(() => {
   font-size: 0.85rem;
   color: #ddd;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s ease;
 }
 
 .playlist-item:hover {
@@ -760,6 +904,21 @@ onUnmounted(() => {
 .playlist-item.active {
   background: #4f46e5;
   color: #fff;
+}
+
+.playlist-item.dragging {
+  opacity: 0.5;
+}
+
+.playlist-item.drag-over {
+  background: rgba(79, 70, 229, 0.2);
+  border-top: 2px solid #4f46e5;
+}
+
+.playlist-item-content {
+  flex: 1;
+  margin-right: 8px;
+  min-width: 0;
 }
 
 .playlist-item-name {
@@ -776,6 +935,40 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.playlist-item-remove {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.playlist-item:hover .playlist-item-remove {
+  opacity: 1;
+}
+
+.playlist-item-remove:hover {
+  background: rgba(255, 59, 48, 0.8);
+  transform: scale(1.1);
+}
+
+.playlist-item.active .playlist-item-remove {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.playlist-item.active .playlist-item-remove:hover {
+  background: rgba(255, 59, 48, 0.8);
 }
 
 .playback-controls {

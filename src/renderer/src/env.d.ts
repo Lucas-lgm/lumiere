@@ -23,9 +23,7 @@ interface Window {
       windowAction: (action: 'close' | 'minimize' | 'maximize') => void
 
       // Playlist
-      playNext: () => void
-      playPrev: () => void
-      getPlaylist: () => void
+      getPlaylist: () => Promise<any[]>
       setPlaylist: (items: any[]) => void
 
       // 退出视频播放器

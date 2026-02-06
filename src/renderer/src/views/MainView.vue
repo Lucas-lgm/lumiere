@@ -106,7 +106,7 @@ import NasFileBrowser from '../components/NasFileBrowser.vue'
 import { useMediaLibrary } from '../composables/useMediaLibrary'
 import { useMountPaths } from '../composables/useMountPaths'
 import { useNas } from '../composables/useNas'
-import { VideoPlayerSDK } from '../core/sdk'
+import { getPlayerSDK } from '../core/sdk'
 import type { MediaResource } from '../types/media'
 
 // 使用 composables
@@ -114,8 +114,7 @@ const mediaLibrary = useMediaLibrary()
 const mountPaths = useMountPaths()
 const nas = useNas()
 
-// 创建 VideoPlayerSDK 实例
-const sdk = new VideoPlayerSDK()
+const sdk = getPlayerSDK()
 
 const {
   resources,
@@ -341,9 +340,8 @@ const handleNasFilePlay = async (file: any) => {
   }
   
   try {
-    // 添加到播放列表
     sdk.addToPlaylist(video)
-    // 播放视频
+    sdk.setPlaylistCurrentByPath(video.path)
     await sdk.play(video)
   } catch (error) {
     console.error('播放 NAS 文件失败:', error)
@@ -450,9 +448,8 @@ const handlePlayVideo = async (video: MediaResource) => {
   }
   
   try {
-    // 添加到播放列表
     sdk.addToPlaylist(videoToPlay)
-    // 播放视频
+    sdk.setPlaylistCurrentByPath(videoToPlay.path)
     await sdk.play(videoToPlay)
   } catch (error) {
     console.error('播放视频失败:', error)
