@@ -446,6 +446,9 @@ export class LibMPVController extends EventEmitter {
     const start = startTime ?? 0
 
     try {
+      // 加载视频前先设置 pause 为 no，确保视频加载后直接播放
+      await this.binding.command(this.instanceId, ['set', 'pause', 'no'])
+      
       // 启用强制黑屏模式，以清除上一视频的残留帧
       // mpv_set_force_black_mode 会触发一次立即渲染（清空缓冲区为黑色）
       this.setForceBlackMode(true)
@@ -854,9 +857,7 @@ export class LibMPVController extends EventEmitter {
         this.currentStatus.isSeeking = false
         this.currentStatus.isNetworkBuffering = false
         this.currentStatus.networkBufferingPercent = 0
-        if (this.currentStatus.phase !== 'paused') {
-          this.currentStatus.phase = 'playing'
-        }
+        this.currentStatus.phase = 'playing'
 
         this.emit('status', { ...this.currentStatus })
         break
