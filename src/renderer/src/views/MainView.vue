@@ -106,12 +106,16 @@ import NasFileBrowser from '../components/NasFileBrowser.vue'
 import { useMediaLibrary } from '../composables/useMediaLibrary'
 import { useMountPaths } from '../composables/useMountPaths'
 import { useNas } from '../composables/useNas'
+import { VideoPlayerSDK } from '../core/sdk'
 import type { MediaResource } from '../types/media'
 
 // 使用 composables
 const mediaLibrary = useMediaLibrary()
 const mountPaths = useMountPaths()
 const nas = useNas()
+
+// 创建 VideoPlayerSDK 实例
+const sdk = new VideoPlayerSDK()
 
 const {
   resources,
@@ -293,8 +297,8 @@ const handleNasFileBrowserMount = () => {
 }
 
 // 处理 NAS 文件播放
-const handleNasFilePlay = (file: any) => {
-  if (!window.electronAPI || !selectedNasConnectionData.value) return
+const handleNasFilePlay = async (file: any) => {
+  if (!selectedNasConnectionData.value) return
   
   // 查找对应的 NAS 连接
   const nasConnection = selectedNasConnectionData.value
@@ -328,11 +332,23 @@ const handleNasFilePlay = (file: any) => {
     // 不需要额外处理
   }
   
-  window.electronAPI.player.playMedia({
+  // 使用 VideoPlayerSDK 播放视频
+  const video = {
+    id: `nas-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     name: file.name,
-    path: playPath
-    // 这里暂不传 startTime，首次播放从头开始，记忆进度由后端在播放过程中记录
-  })
+    path: playPath,
+    source: 'nas'
+  }
+  
+  try {
+    // 添加到播放列表
+    await sdk.addToPlaylist(video)
+    // 播放视频
+    await sdk.play(video)
+  } catch (error) {
+    console.error('播放 NAS 文件失败:', error)
+    ElMessage.error('播放视频失败')
+  }
 }
 
 // 处理 NAS 移除
@@ -382,9 +398,7 @@ const handleNasRefresh = async (id: string) => {
 }
 
 // 处理播放视频
-const handlePlayVideo = (video: MediaResource) => {
-  if (!window.electronAPI) return
-  
+const handlePlayVideo = async (video: MediaResource) => {
   // 根据协议类型处理播放路径
   let playPath = video.path
   
@@ -429,11 +443,21 @@ const handlePlayVideo = (video: MediaResource) => {
     }
   }
   
-  window.electronAPI.player.playMedia({
-    name: video.name,
+  // 使用 VideoPlayerSDK 播放视频
+  const videoToPlay = {
+    ...video,
     path: playPath
-    // 同上，起播时间默认为 0，由后端记忆后续进度
-  })
+  }
+  
+  try {
+    // 添加到播放列表
+    await sdk.addToPlaylist(videoToPlay)
+    // 播放视频
+    await sdk.play(videoToPlay)
+  } catch (error) {
+    console.error('播放视频失败:', error)
+    ElMessage.error('播放视频失败')
+  }
 }
 
 // 处理右键菜单
@@ -459,13 +483,18 @@ const handleSettings = () => {
 }
 
 // 同步播放列表
-const syncPlaylist = () => {
-  if (!window.electronAPI) return
+const syncPlaylist = async () => {
   const items = resources.value.map((resource) => ({
+    id: resource.id,
     name: resource.name,
-    path: resource.path
+    path: resource.path,
+    source: resource.source
   }))
-  window.electronAPI.player.setPlaylist(items)
+  try {
+    await sdk.setPlaylist(items)
+  } catch (error) {
+    console.error('同步播放列表失败:', error)
+  }
 }
 
 // 处理文件选择
@@ -559,15 +588,15 @@ const handleNasConnectionScanned = (data: { id: string; resources: any[] }) => {
   syncPlaylist()
 }
 
-onMounted(() => {
-  if (window.electronAPI) {
-    // 初始化挂载路径
-    ipcCleanups.push(initMountPaths())
-    
-    // 初始化 NAS 连接并保存清理函数
-    ipcCleanups.push(initNasConnections())
-    
-    // 请求 NAS 连接列表
+onMounted(async () => {
+  // 初始化挂载路径
+  ipcCleanups.push(initMountPaths())
+  
+  // 初始化 NAS 连接并保存清理函数
+  ipcCleanups.push(initNasConnections())
+  
+  // 请求 NAS 连接列表
+  if (window.electronAPI?.nas) {
     window.electronAPI.nas.getConnections()
     
     // 监听文件选择
@@ -583,39 +612,48 @@ onMounted(() => {
     ipcCleanups.push(window.electronAPI.nas.onConnectionsUpdated((data) => {
       nasConnectionsList.value = data.connections
     }))
-    
-    // 获取现有播放列表
-    window.electronAPI.player.getPlaylist()
-    
-    // 监听播放列表更新
-    ipcCleanups.push(window.electronAPI.player.onPlaylistUpdated((items: any[]) => {
-      // 将播放列表项转换为资源（如果还没有）
-      items.forEach(item => {
-        const existing = resources.value.find(r => r.path === item.path)
-        if (!existing) {
-          const source: MediaResource['source'] = item.path.startsWith('http://') || item.path.startsWith('https://')
-            ? 'network'
-            : 'local'
-          const resource: MediaResource = {
-            id: `${source}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            name: item.name,
-            path: item.path,
-            source,
-            addedAt: new Date()
-          }
-          addResource(resource)
-        }
-      })
-    }))
   }
+  
+  // 监听播放器状态变化
+  const cleanupStateListener = sdk.onStateChange((state) => {
+    console.log('Player state changed:', state)
+  })
+  
+  // 获取现有播放列表
+  try {
+    const playlist = await sdk.getPlaylist()
+    // 将播放列表项转换为资源（如果还没有）
+    playlist.forEach(item => {
+      const existing = resources.value.find(r => r.path === item.path)
+      if (!existing) {
+        const source: MediaResource['source'] = item.path.startsWith('http://') || item.path.startsWith('https://')
+          ? 'network'
+          : 'local'
+        const resource: MediaResource = {
+          id: `${source}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          name: item.name,
+          path: item.path,
+          source,
+          addedAt: new Date()
+        }
+        addResource(resource)
+      }
+    })
+  } catch (error) {
+    console.error('获取播放列表失败:', error)
+  }
+  
+  // 添加状态监听器清理函数
+  ipcCleanups.push(cleanupStateListener)
 })
 
 onUnmounted(() => {
-  if (window.electronAPI) {
-    // 清理所有 IPC 监听器
-    ipcCleanups.forEach(cleanup => cleanup())
-    ipcCleanups.length = 0
-  }
+  // 清理所有 IPC 监听器
+  ipcCleanups.forEach(cleanup => cleanup())
+  ipcCleanups.length = 0
+  
+  // 销毁 SDK 实例
+  sdk.destroy()
 })
 </script>
 

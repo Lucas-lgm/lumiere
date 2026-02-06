@@ -28,6 +28,9 @@ interface Window {
       getPlaylist: () => void
       setPlaylist: (items: any[]) => void
 
+      // 退出视频播放器
+      quit: () => void
+
       // Events
       onCurrentVideoChanged: (callback: (data: any) => void) => () => void
       onStatus: (callback: (data: any) => void) => () => void

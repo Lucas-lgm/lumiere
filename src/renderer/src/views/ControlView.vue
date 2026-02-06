@@ -791,6 +791,7 @@ onUnmounted(() => {
   transition: opacity 0.3s ease;
   will-change: opacity;
   z-index: 20;
+  transform: none !important;
 }
 
 /* 只隐藏控制栏，不影响其他元素（如 loading-overlay、playlist-panel） */
