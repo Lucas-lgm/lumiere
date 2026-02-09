@@ -240,6 +240,11 @@ export class RenderManager {
    * 标记 Seek 完成（需要渲染）
    */
   markSeekComplete(): void {
+    // 只有在 JS 驱动渲染模式下才需要处理
+    if (!this.mediaPlayer || this.mediaPlayer.getRenderMode() !== 'js-driven') {
+      return
+    }
+    
     this.pendingSeekRender = true
     console.log('[RenderManager] [OK] Seek completed, marked for render')
   }
@@ -248,6 +253,11 @@ export class RenderManager {
    * 标记 Resize 开始（resize 过程中不渲染）
    */
   markResizeStart(): void {
+    // 只有在 JS 驱动渲染模式下才需要处理
+    if (!this.mediaPlayer || this.mediaPlayer.getRenderMode() !== 'js-driven') {
+      return
+    }
+    
     this.isResizing = true
     
     // 重置稳定检测定时器（防抖机制）

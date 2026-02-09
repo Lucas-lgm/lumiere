@@ -41,7 +41,6 @@ function setupServicesMainWindow(mainWindow: BrowserWindow | undefined): void {
 export function setupServices(videoPlayerApp: VideoPlayerApp): void {
   // 立即尝试设置主窗口（如果已创建）
   const mainWindow = videoPlayerApp.getMainWindow()
-  setupServicesMainWindow(mainWindow)
 
   // 如果窗口还未创建，监听窗口创建事件
   if (!mainWindow) {
@@ -55,8 +54,6 @@ export function setupServices(videoPlayerApp: VideoPlayerApp): void {
       
       if (window) {
         clearInterval(checkWindow)
-        setupServicesMainWindow(window)
-        
         // 监听窗口的 ready-to-show 事件，确保窗口完全准备好
         window.once('ready-to-show', () => {
           setupServicesMainWindow(window)
