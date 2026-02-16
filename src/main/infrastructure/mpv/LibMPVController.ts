@@ -515,10 +515,38 @@ export class LibMPVController extends EventEmitter {
     }
 
     const tracks = await this.getProperty('track-list')
-    if (!Array.isArray(tracks)) {
+
+    // 原生 binding 当前返回的是字符串形式的 track-list（JSON 数组）
+    // 例如："[{ id: 1, type: 'video', ... }, ...]"
+    // 因此优先尝试解析字符串为数组
+    if (typeof tracks === 'string') {
+      const text = tracks.trim()
+      if (text.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(text)
+          if (Array.isArray(parsed)) {
+            return parsed
+          }
+        } catch (error) {
+          console.warn('[libmpv] Failed to parse track-list string as JSON:', (error as Error).message)
+        }
+      }
       return []
     }
-    return tracks
+
+    // 兼容未来可能的结构：
+    // - 直接的数组（mpv node array -> JS array）
+    // - 包裹了一层对象，例如 { data: [...] } 或 { tracks: [...] }
+    if (Array.isArray(tracks)) {
+      return tracks
+    }
+    if (tracks && Array.isArray((tracks as any).data)) {
+      return (tracks as any).data
+    }
+    if (tracks && Array.isArray((tracks as any).tracks)) {
+      return (tracks as any).tracks
+    }
+    return []
   }
 
   /**
@@ -739,10 +767,19 @@ export class LibMPVController extends EventEmitter {
    * @param trackId mpv track id，传入 null 表示关闭音轨（使用 no）
    */
   async setAudioTrack(trackId: number | null): Promise<void> {
-    if (trackId == null) {
-      await this.setProperty('aid', 'no')
-    } else {
-      await this.setProperty('aid', trackId)
+    if (this.instanceId === null) {
+      throw new Error('MPV instance not initialized')
+    }
+
+    const target = trackId == null ? 'no' : String(trackId)
+    try {
+      console.log('[libmpv] setAudioTrack -> aid =', target)
+      await this.command('set', 'aid', target)
+      // 切换轨道后，通知上层刷新 track-list（selected 状态可能发生变化）
+      void this.notifyTrackListChanged()
+    } catch (error) {
+      console.warn('[libmpv] Failed to set audio track aid =', target, 'error:', error)
+      throw error
     }
   }
 
@@ -751,10 +788,19 @@ export class LibMPVController extends EventEmitter {
    * @param trackId mpv track id，传入 null 表示关闭字幕（使用 no）
    */
   async setSubtitleTrack(trackId: number | null): Promise<void> {
-    if (trackId == null) {
-      await this.setProperty('sid', 'no')
-    } else {
-      await this.setProperty('sid', trackId)
+    if (this.instanceId === null) {
+      throw new Error('MPV instance not initialized')
+    }
+
+    const target = trackId == null ? 'no' : String(trackId)
+    try {
+      console.log('[libmpv] setSubtitleTrack -> sid =', target)
+      await this.command('set', 'sid', target)
+      // 切换轨道后，同步刷新 track-list
+      void this.notifyTrackListChanged()
+    } catch (error) {
+      console.warn('[libmpv] Failed to set subtitle track sid =', target, 'error:', error)
+      throw error
     }
   }
 
