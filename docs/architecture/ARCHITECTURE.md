@@ -535,6 +535,55 @@ The visibility of the control bar (header + playback controls) in the renderer i
 *   **Main Process Integration**:
     *   The main process can still explicitly show/hide/schedule-hide the control bar via IPC events (`onControlBarShow`, `onControlBarScheduleHide`, `onControlBarHideImmediate`), but the **idle-hide behavior itself does not depend on main-process logic** and runs entirely in the renderer.
 
+### 5.5 Track Selection (Audio & Subtitles)
+
+The application exposes **track selection** (audio / subtitle) as a first-class capability across the stack:
+
+*   **Core Types**:
+    *   `PlayerTrack` (`src/main/application/core/MediaPlayer.ts`) is the canonical representation of a media track:
+        *   `id`: mpv track id (used by `aid`/`sid`).
+        *   `type`: `"audio" | "sub" | "video"`.
+        *   `lang`, `title`: optional language code and human-readable title.
+        *   `selected`: whether this track is currently active.
+        *   `source`: `"internal"` (embedded in media) or `"external"` (external file).
+*   **Infrastructure Layer (mpv)**:
+    *   `LibMPVController`:
+        *   `getTrackList()` wraps mpv’s `track-list` property and returns the raw track array.
+        *   `setAudioTrack(trackId | null)` sets `aid` (or `"no"` when `null`).
+        *   `setSubtitleTrack(trackId | null)` sets `sid` (or `"no"` when `null`).
+    *   `MpvMediaPlayer` adapts these to `PlayerTrack`:
+        *   `getTracks(): Promise<PlayerTrack[]>` normalizes mpv track objects into the core type.
+        *   `setAudioTrack(trackId | null)` / `setSubtitleTrack(trackId | null)` delegate to `LibMPVController`.
+*   **Core / Application Layer**:
+    *   `CorePlayer` exposes:
+        *   `getTracks()`, `setAudioTrack(trackId | null)`, `setSubtitleTrack(trackId | null)` and delegates to its `MediaPlayer`.
+    *   `VideoPlayerApp` provides business-level methods:
+        *   `getTracks()` → used by IPC handlers to serve renderer requests.
+        *   `setAudioTrack(trackId | null)`, `setSubtitleTrack(trackId | null)` → called from IPC.
+*   **IPC & Preload**:
+    *   New IPC channels (`src/main/application/command/ipcConstants.ts`):
+        *   `CONTROL_GET_TRACKS` (`control-get-tracks`)
+        *   `CONTROL_SET_AUDIO_TRACK` (`control-set-audio-track`)
+        *   `CONTROL_SET_SUBTITLE_TRACK` (`control-set-subtitle-track`)
+    *   `playbackHandlers.ts`:
+        *   `ipcMain.handle(CONTROL_GET_TRACKS)` → returns `PlayerTrack[]` from `VideoPlayerApp.getTracks()`.
+        *   `ipcMain.on(CONTROL_SET_AUDIO_TRACK)` / `CONTROL_SET_SUBTITLE_TRACK` → validate ids and call the corresponding `VideoPlayerApp` methods.
+    *   `preload/preload.ts` adds:
+        *   `window.electronAPI.player.getTracks() : Promise<PlayerTrack[]>`
+        *   `window.electronAPI.player.setAudioTrack(trackId | null)`
+        *   `window.electronAPI.player.setSubtitleTrack(trackId | null)`
+*   **Frontend SDK & UI**:
+    *   `VideoPlayerSDK` (`src/renderer/src/core/sdk/VideoPlayerSDK.ts`):
+        *   `getTracks()`, `setAudioTrack(id | null)`, `setSubtitleTrack(id | null)` unified across platforms.
+    *   `ElectronPlatform` routes these calls to `window.electronAPI.player`.
+    *   `ControlView.vue`:
+        *   Calls `sdk.getTracks()` when a new video is played or when playback first reaches `playing/paused` to populate local `tracks`.
+        *   Derives `audioTracks` / `subtitleTracks` from the full list and tracks current selection via `selectedAudioTrackId` / `selectedSubtitleTrackId`.
+        *   Renders two `el-select` controls in the control bar:
+            *   **Audio**: choose specific audio tracks or fall back to “默认音轨”.
+            *   **Subtitles**: choose between available subtitle tracks or “无字幕”.
+        *   On selection change, calls `sdk.setAudioTrack(...)` / `sdk.setSubtitleTrack(...)`, which flow through IPC to mpv.
+
 ## 6. Frontend SDK Design
 
 The application features a unified frontend SDK (`VideoPlayerSDK`) that provides a consistent API for both Electron and Web platforms, abstracting away platform-specific implementation details.

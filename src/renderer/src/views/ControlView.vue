@@ -121,6 +121,38 @@
             <button @click="toggleShuffle" class="btn-control" :title="sdk.getShuffle() ? '关闭随机' : '开启随机'">
               {{ sdk.getShuffle() ? '🔀' : '▶️' }}
             </button>
+            <el-select
+              v-if="audioTracks.length > 0"
+              v-model="selectedAudioTrackId"
+              class="track-select"
+              size="small"
+              placeholder="音轨"
+              @change="onAudioTrackChange"
+            >
+              <el-option :key="'audio-none'" :label="'默认音轨'" :value="null" />
+              <el-option
+                v-for="track in audioTracks"
+                :key="`audio-${track.id}`"
+                :label="formatAudioTrackLabel(track)"
+                :value="track.id"
+              />
+            </el-select>
+            <el-select
+              v-if="subtitleTracks.length > 0"
+              v-model="selectedSubtitleTrackId"
+              class="track-select"
+              size="small"
+              placeholder="字幕"
+              @change="onSubtitleTrackChange"
+            >
+              <el-option :key="'sub-none'" label="无字幕" :value="null" />
+              <el-option
+                v-for="track in subtitleTracks"
+                :key="`sub-${track.id}`"
+                :label="formatSubtitleTrackLabel(track)"
+                :value="track.id"
+              />
+            </el-select>
             <button
               v-if="!isWindows"
               @click="toggleHdr"
@@ -208,10 +240,24 @@ interface PlaylistItem {
   startTime?: number
 }
 
+interface PlayerTrack {
+  id: number
+  type: 'audio' | 'sub' | 'video'
+  lang?: string
+  title?: string
+  selected: boolean
+  source: 'internal' | 'external'
+}
+
 const sdk = getPlayerSDK()
 const playlist = ref<PlaylistItem[]>([])
 const showPlaylist = ref(false)
 const currentPath = ref<string | null>(null)
+const tracks = ref<PlayerTrack[]>([])
+const audioTracks = computed(() => tracks.value.filter(t => t.type === 'audio'))
+const subtitleTracks = computed(() => tracks.value.filter(t => t.type === 'sub'))
+const selectedAudioTrackId = ref<number | null>(null)
+const selectedSubtitleTrackId = ref<number | null>(null)
 
 function refreshPlaylistFromSDK() {
   playlist.value = sdk.getPlaylist().map((m) => ({
@@ -318,6 +364,29 @@ const handlePlayVideo = (file: { name: string; path: string }) => {
   duration.value = 0
   // 先进入 loading 态，等后端真正广播 phase 再修正
   isLoading.value = true
+  // 视频切换时刷新可用轨道信息
+  refreshTracks().catch((error) => {
+    console.error('[ControlView] Failed to refresh tracks on handlePlayVideo:', error)
+  })
+}
+
+const refreshTracks = async () => {
+  try {
+    const result = await sdk.getTracks()
+    if (Array.isArray(result)) {
+      tracks.value = result as PlayerTrack[]
+      const currentAudio = audioTracks.value.find(t => t.selected) || null
+      const currentSub = subtitleTracks.value.find(t => t.selected) || null
+      selectedAudioTrackId.value = currentAudio ? currentAudio.id : null
+      selectedSubtitleTrackId.value = currentSub ? currentSub.id : null
+    } else {
+      tracks.value = []
+      selectedAudioTrackId.value = null
+      selectedSubtitleTrackId.value = null
+    }
+  } catch (error) {
+    console.error('[ControlView] Failed to get tracks:', error)
+  }
 }
 
 const handlePlayerState = (status: PlayerStatusSnapshot) => {
@@ -418,6 +487,49 @@ const handlePlayerState = (status: PlayerStatusSnapshot) => {
       const parts = status.path.split(/[/\\]/)
       currentVideoName.value = parts[parts.length - 1] || status.path
     }
+  }
+
+  // 在首次进入 playing/paused 时刷新轨道信息，以确保列表与后端一致
+  if ((status.phase === 'playing' || status.phase === 'paused') && duration.value > 0) {
+    refreshTracks().catch((error) => {
+      console.error('[ControlView] Failed to refresh tracks on state change:', error)
+    })
+  }
+}
+
+const formatAudioTrackLabel = (track: PlayerTrack): string => {
+  const parts: string[] = []
+  if (track.lang) parts.push(track.lang)
+  if (track.title) parts.push(track.title)
+  if (track.source === 'external') parts.push('外部')
+  return parts.length > 0 ? parts.join(' / ') : `音轨 ${track.id}`
+}
+
+const formatSubtitleTrackLabel = (track: PlayerTrack): string => {
+  const parts: string[] = []
+  if (track.lang) parts.push(track.lang)
+  if (track.title) parts.push(track.title)
+  if (track.source === 'external') parts.push('外部')
+  return parts.length > 0 ? parts.join(' / ') : `字幕 ${track.id}`
+}
+
+const onAudioTrackChange = async (value: number | null) => {
+  selectedAudioTrackId.value = value
+  try {
+    const id = typeof value === 'number' && value > 0 ? value : null
+    await sdk.setAudioTrack(id)
+  } catch (error) {
+    console.error('[ControlView] Failed to set audio track:', error)
+  }
+}
+
+const onSubtitleTrackChange = async (value: number | null) => {
+  selectedSubtitleTrackId.value = value
+  try {
+    const id = typeof value === 'number' && value > 0 ? value : null
+    await sdk.setSubtitleTrack(id)
+  } catch (error) {
+    console.error('[ControlView] Failed to set subtitle track:', error)
   }
 }
 
@@ -679,6 +791,14 @@ onMounted(async () => {
         refreshPlaylistFromSDK()
       }
     }))
+    // 监听轨道列表变化事件，收到后刷新 tracks 列表
+    if (window.electronAPI.player.onTracksChanged) {
+      unsubs.push(window.electronAPI.player.onTracksChanged(() => {
+        refreshTracks().catch((error) => {
+          console.error('[ControlView] Failed to refresh tracks on tracks-changed event:', error)
+        })
+      }))
+    }
   }
 })
 

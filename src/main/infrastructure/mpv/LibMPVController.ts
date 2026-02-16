@@ -504,6 +504,36 @@ export class LibMPVController extends EventEmitter {
   }
 
   /**
+   * 获取当前媒体的轨道列表（基于 mpv 的 track-list）
+   *
+   * 返回值是 mpv 原始 track-list 的瘦包装，字段命名尽量与 mpv 保持一致，
+   * 上层会在 MediaPlayer 层适配为 PlayerTrack 结构。
+   */
+  async getTrackList(): Promise<any[]> {
+    if (this.instanceId === null) {
+      throw new Error('MPV instance not initialized')
+    }
+
+    const tracks = await this.getProperty('track-list')
+    if (!Array.isArray(tracks)) {
+      return []
+    }
+    return tracks
+  }
+
+  /**
+   * 内部工具：通知上层轨道列表已更新
+   */
+  private async notifyTrackListChanged(): Promise<void> {
+    try {
+      const tracks = await this.getTrackList()
+      this.emit('tracks-change', tracks)
+    } catch (error) {
+      console.warn('[libmpv] Failed to notify track list change:', error)
+    }
+  }
+
+  /**
    * 调试工具：打印当前视频和窗口状态
    */
   async debugVideoState(): Promise<void> {
@@ -704,6 +734,30 @@ export class LibMPVController extends EventEmitter {
     await this.setProperty('volume', Math.max(0, Math.min(100, volume)))
   }
 
+  /**
+   * 切换音轨
+   * @param trackId mpv track id，传入 null 表示关闭音轨（使用 no）
+   */
+  async setAudioTrack(trackId: number | null): Promise<void> {
+    if (trackId == null) {
+      await this.setProperty('aid', 'no')
+    } else {
+      await this.setProperty('aid', trackId)
+    }
+  }
+
+  /**
+   * 切换字幕轨
+   * @param trackId mpv track id，传入 null 表示关闭字幕（使用 no）
+   */
+  async setSubtitleTrack(trackId: number | null): Promise<void> {
+    if (trackId == null) {
+      await this.setProperty('sid', 'no')
+    } else {
+      await this.setProperty('sid', trackId)
+    }
+  }
+
   setForceBlackMode(enabled: boolean): void {
     if (this.instanceId === null) return
     try {
@@ -861,6 +915,8 @@ export class LibMPVController extends EventEmitter {
         this.currentStatus.phase = 'playing'
 
         this.emit('status', { ...this.currentStatus })
+        // 文件加载完成后，轨道信息通常已经就绪，通知上层轨道列表已更新
+        void this.notifyTrackListChanged()
         break
       }
       case MPV_EVENT_SEEK: {

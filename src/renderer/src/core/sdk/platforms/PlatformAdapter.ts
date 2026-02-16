@@ -51,4 +51,21 @@ export interface PlatformAdapter {
    * 彻底退出播放器
    */
   quit(): Promise<void>;
+
+  /**
+   * 获取当前媒体的轨道列表（音轨 / 字幕 / 视频）
+   */
+  getTracks(): Promise<any[]>;
+
+  /**
+   * 切换音轨
+   * @param trackId 轨道 id，传入 null/0 表示关闭或回到默认
+   */
+  setAudioTrack(trackId: number | null): Promise<void>;
+
+  /**
+   * 切换字幕轨
+   * @param trackId 轨道 id，传入 null/0 表示关闭字幕
+   */
+  setSubtitleTrack(trackId: number | null): Promise<void>;
 }

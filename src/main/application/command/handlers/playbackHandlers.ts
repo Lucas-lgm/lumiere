@@ -96,6 +96,31 @@ export function setupPlaybackHandlers(videoPlayerApp: VideoPlayerApp, corePlayer
     IPC_CHANNELS.CONTROL_HDR
   ))
 
+  // 轨道相关控制：获取轨道列表 / 切换音轨 / 切换字幕
+  ipcMain.handle(IPC_CHANNELS.CONTROL_GET_TRACKS, async () => {
+    return await videoPlayerApp.getTracks()
+  })
+
+  ipcMain.on(IPC_CHANNELS.CONTROL_SET_AUDIO_TRACK, createIpcHandler<[number | null]>(
+    async (_event, trackId: number | null) => {
+      await videoPlayerApp.setAudioTrack(
+        typeof trackId === 'number' && trackId > 0 ? trackId : null
+      )
+    },
+    undefined,
+    IPC_CHANNELS.CONTROL_SET_AUDIO_TRACK
+  ))
+
+  ipcMain.on(IPC_CHANNELS.CONTROL_SET_SUBTITLE_TRACK, createIpcHandler<[number | null]>(
+    async (_event, trackId: number | null) => {
+      await videoPlayerApp.setSubtitleTrack(
+        typeof trackId === 'number' && trackId > 0 ? trackId : null
+      )
+    },
+    undefined,
+    IPC_CHANNELS.CONTROL_SET_SUBTITLE_TRACK
+  ))
+
   // 其他控制（路由到 App 或 CorePlayer）
   ipcMain.on(IPC_CHANNELS.CONTROL_KEYPRESS, createIpcHandler<[string]>(
     async (_event, key: string) => {

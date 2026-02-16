@@ -6,7 +6,7 @@ import { getNSViewPointer, getHWNDPointer } from '../../infrastructure/platform/
 import { RenderManager } from '../../infrastructure/rendering/renderManager'
 import { Media } from '../../domain/models/Media'
 import type { PlaybackSession } from '../../domain/models/Playback'
-import type { MediaPlayer, PlayerStatus } from './MediaPlayer'
+import type { MediaPlayer, PlayerStatus, PlayerTrack } from './MediaPlayer'
 import { createLogger } from '../../infrastructure/logging'
 import { WINDOW_DELAYS } from '../constants'
 import { TaskQueue } from '../../infrastructure/scheduling/TaskQueue'
@@ -35,6 +35,9 @@ export interface CorePlayer extends EventEmitter {
   stop(): Promise<void>
   seek(time: number): Promise<void>
   setVolume(volume: number): Promise<void>
+  getTracks(): Promise<PlayerTrack[]>
+  setAudioTrack(trackId: number | null): Promise<void>
+  setSubtitleTrack(trackId: number | null): Promise<void>
   getCurrentSession(): PlaybackSession | null
   cleanup(): Promise<void>
   getPlayerStatus(): PlayerStatus
@@ -97,6 +100,11 @@ class CorePlayerImpl extends EventEmitter implements CorePlayer {
       this.emit('player-status', status)
     }
     this.stateMachine.on('state', this.stateMachineStateListener)
+    
+    // 透传 MediaPlayer 的轨道变化事件，供 VideoPlayerApp 广播给前端
+    this.mediaPlayer.on('tracks-change', (tracks: PlayerTrack[]) => {
+      this.emit('tracks-change', tracks)
+    })
     
     // 监听视频帧率变化，动态调整渲染间隔
     this.mediaPlayer.onFpsChange((fps: number | null) => {
@@ -390,6 +398,18 @@ class CorePlayerImpl extends EventEmitter implements CorePlayer {
   async setVolume(volume: number): Promise<void> {
     // 音量是全局属性，不需要等待播放状态，直接执行以保证响应速度
     await this.mediaPlayer.setVolume(volume)
+  }
+
+  async getTracks(): Promise<PlayerTrack[]> {
+    return this.mediaPlayer.getTracks()
+  }
+
+  async setAudioTrack(trackId: number | null): Promise<void> {
+    await this.mediaPlayer.setAudioTrack(trackId)
+  }
+
+  async setSubtitleTrack(trackId: number | null): Promise<void> {
+    await this.mediaPlayer.setSubtitleTrack(trackId)
   }
 
   async stop(): Promise<void> {

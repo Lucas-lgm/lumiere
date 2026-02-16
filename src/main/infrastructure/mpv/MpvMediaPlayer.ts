@@ -3,7 +3,7 @@
 import { EventEmitter } from 'events'
 import { LibMPVController, isLibMPVAvailable } from './LibMPVController'
 import type { MPVStatus } from './types'
-import type { MediaPlayer, PlayerStatus } from '../../application/core/MediaPlayer'
+import type { MediaPlayer, PlayerStatus, PlayerTrack } from '../../application/core/MediaPlayer'
 import { Media } from '../../domain/models/Media'
 import { PlaybackSession, PlaybackStatus } from '../../domain/models/Playback'
 import { MpvAdapter } from './MpvAdapter'
@@ -67,6 +67,15 @@ export class MpvMediaPlayer extends EventEmitter implements MediaPlayer {
     // 监听 MPV 状态变化
     this.controller.on('status', (status: MPVStatus) => {
       this.updateSessionFromStatus(status)
+    })
+    // 监听轨道列表变化，并向上发出标准化的 PlayerTrack 列表
+    this.controller.on('tracks-change', (rawTracks: any[]) => {
+      try {
+        const playerTracks = this.adaptRawTracksToPlayerTracks(rawTracks)
+        this.emit('tracks-change', playerTracks)
+      } catch (error) {
+        console.error('[MpvMediaPlayer] Error adapting tracks-change event:', error)
+      }
     })
     
     // 监听 FPS 变化
@@ -258,6 +267,63 @@ export class MpvMediaPlayer extends EventEmitter implements MediaPlayer {
       )
       this.updateSession(updatedSession)
     }
+  }
+
+  /**
+   * 获取当前媒体的轨道列表，并适配为 PlayerTrack 结构
+   */
+  async getTracks(): Promise<PlayerTrack[]> {
+    if (!this.controller) {
+      throw new Error('MPV controller not initialized')
+    }
+
+    const rawTracks = await this.controller.getTrackList()
+    return this.adaptRawTracksToPlayerTracks(rawTracks)
+  }
+
+  /**
+   * 将 mpv 原始 track-list 适配为 PlayerTrack[]
+   */
+  private adaptRawTracksToPlayerTracks(rawTracks: any): PlayerTrack[] {
+    if (!Array.isArray(rawTracks)) return []
+
+    return rawTracks
+      .filter((t: any) => t && typeof t.id === 'number' && typeof t.type === 'string')
+      .map((t: any) => {
+        const type = String(t.type) as string
+        // mpv 使用 "audio" / "video" / "sub" 标识类型
+        const normalizedType: 'audio' | 'video' | 'sub' =
+          type === 'audio' || type === 'video' || type === 'sub' ? type : 'video'
+
+        return {
+          id: t.id as number,
+          type: normalizedType,
+          lang: typeof t.lang === 'string' ? t.lang : undefined,
+          title: typeof t.title === 'string' ? t.title : undefined,
+          selected: !!t['selected'],
+          source: t['external'] ? 'external' as const : 'internal' as const
+        }
+      })
+  }
+
+  /**
+   * 切换音轨
+   */
+  async setAudioTrack(trackId: number | null): Promise<void> {
+    if (!this.controller) {
+      throw new Error('MPV controller not initialized')
+    }
+    await this.controller.setAudioTrack(trackId)
+  }
+
+  /**
+   * 切换字幕轨
+   */
+  async setSubtitleTrack(trackId: number | null): Promise<void> {
+    if (!this.controller) {
+      throw new Error('MPV controller not initialized')
+    }
+    await this.controller.setSubtitleTrack(trackId)
   }
 
   /**

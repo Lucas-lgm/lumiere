@@ -27,6 +27,27 @@ export interface PlayerStatus {
 }
 
 /**
+ * 播放轨道信息（音轨 / 字幕 / 视频）
+ *
+ * 该结构用于在核心层、应用层以及 IPC 之间传递 mpv 的 track-list 信息，
+ * 便于前端展示和选择音轨/字幕。
+ */
+export interface PlayerTrack {
+  /** mpv 内部的 track id（aid/sid 等属性使用的 id） */
+  id: number
+  /** 轨道类型：audio / sub / video */
+  type: 'audio' | 'sub' | 'video'
+  /** 语言代码（如 zh-CN、en、ja），如果可用 */
+  lang?: string
+  /** 轨道标题（如“简体中文字幕”、“英语 5.1 声道”），如果可用 */
+  title?: string
+  /** 是否为当前选中的轨道 */
+  selected: boolean
+  /** 轨道来源：内嵌(internal) 或 外部文件(external) */
+  source: 'internal' | 'external'
+}
+
+/**
  * 媒体播放器服务接口（与 CorePlayer 同属应用核心，约定播放契约）
  */
 export interface MediaPlayer extends EventEmitter {
@@ -42,6 +63,18 @@ export interface MediaPlayer extends EventEmitter {
   stop(): Promise<void>
   seek(time: number): Promise<void>
   setVolume(volume: number): Promise<void>
+  /**
+   * 获取当前媒体的轨道列表（包括音轨 / 字幕 / 视频）
+   */
+  getTracks(): Promise<PlayerTrack[]>
+  /**
+   * 切换音轨（传入 null 或无效 id 表示关闭音轨/回到默认行为）
+   */
+  setAudioTrack(trackId: number | null): Promise<void>
+  /**
+   * 切换字幕轨（传入 null 或无效 id 表示关闭字幕）
+   */
+  setSubtitleTrack(trackId: number | null): Promise<void>
   
   // 会话管理
   getCurrentSession(): PlaybackSession | null

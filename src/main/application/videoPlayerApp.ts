@@ -6,7 +6,7 @@ import { WindowPool } from './windows/WindowPool'
 import { WindowController } from './windows/WindowController'
 import { WindowStrategyFactory } from './windows/WindowStrategyFactory'
 import type { CorePlayer } from './core/corePlayer'
-import type { PlayerStatus } from './core/MediaPlayer'
+import type { PlayerStatus, PlayerTrack } from './core/MediaPlayer'
 import type { PlayVideoRequest } from './command/ipcTypes'
 import { Playlist } from '../domain/models/Playlist'
 import { Media } from '../domain/models/Media'
@@ -205,6 +205,10 @@ export class VideoPlayerApp {
     this.playlist = new Playlist()
     this.corePlayer.onPlayerStatus(this.onEndedPlayNext)
     this.corePlayer.on('player-status', this.onPlayerStatusBroadcast)
+    // 轨道列表变化时，将事件广播给播放窗口（ControlView 使用此信号触发刷新）
+    this.corePlayer.on('tracks-change', (tracks: PlayerTrack[]) => {
+      this.sendToPlaybackUIs('tracks-changed', tracks)
+    })
     
     // 初始化窗口池
     this.windowPool = WindowPool.getInstance()
@@ -268,6 +272,27 @@ export class VideoPlayerApp {
   async setVolume(volume: number): Promise<void> {
     await this.corePlayer.setVolume(volume)
     this.config.setVolume(volume)
+  }
+
+  /**
+   * 获取当前媒体的轨道列表（音轨 / 字幕 / 视频）
+   */
+  async getTracks(): Promise<PlayerTrack[]> {
+    return this.corePlayer.getTracks()
+  }
+
+  /**
+   * 切换音轨
+   */
+  async setAudioTrack(trackId: number | null): Promise<void> {
+    await this.corePlayer.setAudioTrack(trackId)
+  }
+
+  /**
+   * 切换字幕轨
+   */
+  async setSubtitleTrack(trackId: number | null): Promise<void> {
+    await this.corePlayer.setSubtitleTrack(trackId)
   }
 
   async stopPlayback(): Promise<void> {

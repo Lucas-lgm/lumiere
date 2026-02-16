@@ -22,6 +22,9 @@ export const IPC_CHANNELS = {
   CONTROL_HDR: 'control-hdr',
   CONTROL_KEYPRESS: 'control-keypress',
   CONTROL_QUIT: 'control-quit',
+  CONTROL_GET_TRACKS: 'control-get-tracks',
+  CONTROL_SET_AUDIO_TRACK: 'control-set-audio-track',
+  CONTROL_SET_SUBTITLE_TRACK: 'control-set-subtitle-track',
   
   // 播放列表
   GET_PLAYLIST: 'get-playlist',

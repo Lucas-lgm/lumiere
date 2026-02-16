@@ -72,4 +72,28 @@ export class ElectronPlatform implements PlatformAdapter {
   async quit(): Promise<void> {
     window.electronAPI.player.quit();
   }
+
+  /**
+   * 获取当前媒体的轨道列表
+   */
+  async getTracks(): Promise<any[]> {
+    if (!window.electronAPI.player.getTracks) return [];
+    return await window.electronAPI.player.getTracks();
+  }
+
+  /**
+   * 切换音轨
+   */
+  async setAudioTrack(trackId: number | null): Promise<void> {
+    if (!window.electronAPI.player.setAudioTrack) return;
+    window.electronAPI.player.setAudioTrack(trackId);
+  }
+
+  /**
+   * 切换字幕轨
+   */
+  async setSubtitleTrack(trackId: number | null): Promise<void> {
+    if (!window.electronAPI.player.setSubtitleTrack) return;
+    window.electronAPI.player.setSubtitleTrack(trackId);
+  }
 }

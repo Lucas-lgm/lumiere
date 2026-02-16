@@ -68,4 +68,25 @@ export class WebPlatform implements PlatformAdapter {
   async quit(): Promise<void> {
     return Promise.resolve();
   }
+
+  /**
+   * 获取当前媒体的轨道列表（Web 平台暂未实现，返回空数组）
+   */
+  async getTracks(): Promise<any[]> {
+    return Promise.resolve([]);
+  }
+
+  /**
+   * 切换音轨（Web 平台暂未实现）
+   */
+  async setAudioTrack(_trackId: number | null): Promise<void> {
+    return Promise.resolve();
+  }
+
+  /**
+   * 切换字幕轨（Web 平台暂未实现）
+   */
+  async setSubtitleTrack(_trackId: number | null): Promise<void> {
+    return Promise.resolve();
+  }
 }

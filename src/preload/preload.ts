@@ -15,6 +15,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     toggleFullscreen: () => ipcRenderer.send('control-toggle-fullscreen'),
     setHdr: (enabled: boolean) => ipcRenderer.send('control-hdr', enabled),
     windowAction: (action: 'close' | 'minimize' | 'maximize') => ipcRenderer.send('control-window-action', action),
+    getTracks: () => ipcRenderer.invoke('control-get-tracks'),
+    setAudioTrack: (trackId: number | null) => ipcRenderer.send('control-set-audio-track', trackId),
+    setSubtitleTrack: (trackId: number | null) => ipcRenderer.send('control-set-subtitle-track', trackId),
 
     // Playlist
     getPlaylist: () => {
@@ -48,6 +51,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
       const subscription = (_: any, data: any) => callback(data)
       ipcRenderer.on('playlist-updated', subscription)
       return () => ipcRenderer.removeListener('playlist-updated', subscription)
+    },
+    onTracksChanged: (callback: (data: any) => void) => {
+      const subscription = (_: any, data: any) => callback(data)
+      ipcRenderer.on('tracks-changed', subscription)
+      return () => ipcRenderer.removeListener('tracks-changed', subscription)
     },
     onControlBarShow: (callback: () => void) => {
       const subscription = () => callback()

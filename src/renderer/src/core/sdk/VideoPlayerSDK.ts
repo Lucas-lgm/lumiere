@@ -86,6 +86,27 @@ export class VideoPlayerSDK {
   }
 
   /**
+   * 获取当前媒体的轨道列表（音轨 / 字幕 / 视频）
+   */
+  async getTracks(): Promise<any[]> {
+    return this.platform.getTracks();
+  }
+
+  /**
+   * 切换音轨
+   */
+  async setAudioTrack(trackId: number | null): Promise<void> {
+    return this.platform.setAudioTrack(trackId);
+  }
+
+  /**
+   * 切换字幕轨
+   */
+  async setSubtitleTrack(trackId: number | null): Promise<void> {
+    return this.platform.setSubtitleTrack(trackId);
+  }
+
+  /**
    * 获取当前播放列表
    */
   getPlaylist(): PlaylistType {

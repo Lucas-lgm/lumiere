@@ -36,6 +36,7 @@ interface Window {
       onControlBarShow: (callback: () => void) => () => void
       onControlBarScheduleHide: (callback: () => void) => () => void
       onControlBarHideImmediate: (callback: () => void) => () => void
+      onTracksChanged?: (callback: (data: any) => void) => () => void
     }
 
     // NAS API
