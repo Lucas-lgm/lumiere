@@ -2,7 +2,7 @@
   <div 
     class="control-view" 
     :class="{ 
-      // 'controls-hidden': !controlsVisible,
+      'controls-hidden': !controlsVisible,
       // 'video-not-ready': !isVideoReady
     }"
   >

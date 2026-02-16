@@ -274,6 +274,7 @@ export class LibMPVController extends EventEmitter {
         this.binding.attachView(this.instanceId, windowId)
         this.binding.setHdrMode(this.instanceId, this.hdrEnabled)
         // 默认使用 Native 驱动 (CVDisplayLink)，无需启用 JS 驱动模式
+        // this.binding.setJsDrivenRenderMode(this.instanceId, true);
       } else if (process.platform === 'win32') {
         // Windows: 使用 wid 嵌入方式
         // 注意：wid 应该在初始化前设置，但如果已经在 initialize 中设置过，这里可以跳过

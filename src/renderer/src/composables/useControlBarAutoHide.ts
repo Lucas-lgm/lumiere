@@ -135,8 +135,8 @@ export function useControlBarAutoHide(
       )
       // 清除定时器引用，这样下次可以重新设置
       hideTimer.value = null
+      // 鼠标在窗口内 3 秒没有移动时，只要处于播放中且非加载/非拖动，就隐藏控制栏
       if (
-        !isHovering.value &&
         isPlaying.value &&
         !isScrubbing.value &&
         !isLoading.value
@@ -157,8 +157,10 @@ export function useControlBarAutoHide(
   // 鼠标离开控制栏区域
   const onControlBarLeave = () => {
     isHovering.value = false
+    // 播放中且非加载/非拖动时，鼠标移出控制栏立即隐藏
     if (isPlaying.value && !isLoading.value && !isScrubbing.value) {
-      scheduleHide()
+      clearHideTimer()
+      hideControls()
     }
   }
 
@@ -169,10 +171,9 @@ export function useControlBarAutoHide(
       showControls()
     }
 
-    // 无论控制栏是否已显示，鼠标移动后都应该重置隐藏定时器
-    // 这样鼠标停止移动3秒后会自动隐藏
+    // 无论鼠标是否在控制栏上，只要在播放中且非加载/非拖动，
+    // 鼠标移动后都重置隐藏定时器，实现“屏幕内鼠标 3 秒不动则自动隐藏”
     if (
-      !isHovering.value &&
       isPlaying.value &&
       !isLoading.value &&
       !isScrubbing.value

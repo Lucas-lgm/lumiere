@@ -517,6 +517,24 @@ The scheduler employs a **State-Gated Serial Execution** strategy to ensure dete
 
 ---
 
+### 5.4 Control Bar Auto-Hide (Renderer Behavior)
+
+The visibility of the control bar (header + playback controls) in the renderer is managed purely on the **UI side** via the `useControlBarAutoHide` composable (`src/renderer/src/composables/useControlBarAutoHide.ts`) and the `ControlView` component (`src/renderer/src/views/ControlView.vue`):
+
+*   **Visibility Flag**: `controlsVisible` is the single source of truth for whether the control bar is shown. It is bound to the root `control-view` element via the `controls-hidden` CSS class.
+*   **Mouse Idle Auto-Hide**:
+    *   A window-level `mousemove` listener (debounced) tracks pointer activity inside the control window.
+    *   When the player is **playing**, **not loading**, and **not scrubbing**, each mouse move resets a hide timer (default **3000ms**).
+    *   If there is **no mouse movement for `hideDelay` ms**, the timer fires and hides the control bar by setting `controlsVisible = false`.
+*   **Control Area Enter/Leave**:
+    *   **Enter** (`onControlBarEnter` on header/controls): sets `isHovering = true` and immediately shows the control bar.
+    *   **Leave** (`onControlBarLeave`): when the player is playing and not loading/scrubbing, it **immediately hides** the control bar (no extra delay), matching the UX expectation that leaving the control area should hide controls right away.
+*   **State Guards**:
+    *   Auto-hide is **disabled** while the player is loading/buffering, paused/stopped, or while the user is actively scrubbing the timeline.
+    *   In these states, the control bar is forced visible to avoid confusing the user during critical interactions.
+*   **Main Process Integration**:
+    *   The main process can still explicitly show/hide/schedule-hide the control bar via IPC events (`onControlBarShow`, `onControlBarScheduleHide`, `onControlBarHideImmediate`), but the **idle-hide behavior itself does not depend on main-process logic** and runs entirely in the renderer.
+
 ## 6. Frontend SDK Design
 
 The application features a unified frontend SDK (`VideoPlayerSDK`) that provides a consistent API for both Electron and Web platforms, abstracting away platform-specific implementation details.
