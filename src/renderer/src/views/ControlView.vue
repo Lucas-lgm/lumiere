@@ -828,6 +828,11 @@ onUnmounted(() => {
   transition: background 0.3s ease;
 }
 
+/* 当控制栏隐藏时，同时隐藏鼠标指针，获得纯净观感 */
+.control-view.controls-hidden {
+  cursor: none;
+}
+
 /* Removed .control-view.video-not-ready background to prevent blocking video window */
 
 .loading-overlay {
