@@ -184,6 +184,15 @@ export class LibMPVController extends EventEmitter {
       } catch (error) {
         // 忽略，可能不存在
       }
+
+      // 默认语言偏好：优先选择英文音轨和字幕（如果存在）
+      try {
+        await this.setOption('alang', 'en,en-US,en-GB')
+        await this.setOption('slang', 'en,en-US,en-GB')
+        console.log('[libmpv] ✅ Applied language preferences (alang/slang) for English')
+      } catch (error) {
+        console.warn('[libmpv] Failed to set language preferences (alang/slang):', error)
+      }
       
       try {
         await this.setOption('input-default-bindings', true)

@@ -584,6 +584,20 @@ The application exposes **track selection** (audio / subtitle) as a first-class 
             *   **Subtitles**: choose between available subtitle tracks or “无字幕”.
         *   On selection change, calls `sdk.setAudioTrack(...)` / `sdk.setSubtitleTrack(...)`, which flow through IPC to mpv.
 
+### 5.6 Default Language Preferences (mpv)
+
+To make audio and subtitle selection consistent across all media, the mpv integration applies **default language preferences** during initialization:
+
+*   **Options** (set in `LibMPVController.initialize` *before* `binding.initialize()`):
+    *   `alang = "en,en-US,en-GB"` → mpv will prefer English-family audio tracks (if present).
+    *   `slang = "en,en-US,en-GB"` → mpv will prefer English-family subtitle tracks (if present).
+*   **Behavior**:
+    *   When a new file is loaded, mpv evaluates available tracks and automatically selects the **first matching language** from the preference list.
+    *   If no matching English tracks exist, mpv falls back to its normal selection rules (`default` / `forced` flags).
+*   **Interaction with Track Selection UI**:
+    *   The UI’s initial `getTracks()` call sees the mpv-selected tracks (with `selected: true`) and binds them as the initial selection in the audio/subtitle dropdowns.
+    *   User overrides via `setAudioTrack` / `setSubtitleTrack` take precedence over the automatic selection for the current session, but do not change the global preferences.
+
 ## 6. Frontend SDK Design
 
 The application features a unified frontend SDK (`VideoPlayerSDK`) that provides a consistent API for both Electron and Web platforms, abstracting away platform-specific implementation details.

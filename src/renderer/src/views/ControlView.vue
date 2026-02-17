@@ -3,7 +3,7 @@
     class="control-view" 
     :class="{ 
       'controls-hidden': !controlsVisible,
-      // 'video-not-ready': !isVideoReady
+      'video-not-ready': !isVideoReady
     }"
   >
     <header 
