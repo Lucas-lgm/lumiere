@@ -75,10 +75,10 @@ class CorePlayerImpl extends EventEmitter implements CorePlayer {
     this.scheduler = new PlaybackScheduler(this.taskQueue, this.stateMachine)
     
     // 初始化渲染管理器（使用 MediaPlayer）
-    this.renderManager = new RenderManager(
-      this.mediaPlayer,
-      () => this.stateMachine.getState()
-    )
+    // this.renderManager = new RenderManager(
+    //   this.mediaPlayer,
+    //   () => this.stateMachine.getState()
+    // )
     
     // 监听 MediaPlayer 的状态变化，更新 PlayerStateMachine
     // 使用 onStatusChange 直接接收 PlayerStatus，避免中间转换
@@ -218,11 +218,11 @@ class CorePlayerImpl extends EventEmitter implements CorePlayer {
 
     try {
       // 更新 RenderManager 的 mediaPlayer 引用（如果已创建）
-      if (this.renderManager) {
-        this.renderManager.setMediaPlayer(this.mediaPlayer)
-      }
+      // if (this.renderManager) {
+      //   this.renderManager.setMediaPlayer(this.mediaPlayer)
+      // }
       
-      this.setupResizeHandler()
+      // this.setupResizeHandler()
       this.setupEventHandlers()
 
       if (warmup && this.mediaPlayer instanceof MpvMediaPlayer) {
@@ -342,11 +342,11 @@ class CorePlayerImpl extends EventEmitter implements CorePlayer {
     if (width === this.lastPhysicalWidth && height === this.lastPhysicalHeight) {
       return
     }
-    logger.debug('Window size changed', {
-      from: `${this.lastPhysicalWidth}x${this.lastPhysicalHeight}`,
-      to: `${width}x${height}`,
-      scaleFactor
-    })
+    // logger.debug('Window size changed', {
+    //   from: `${this.lastPhysicalWidth}x${this.lastPhysicalHeight}`,
+    //   to: `${width}x${height}`,
+    //   scaleFactor
+    // })
     this.lastPhysicalWidth = width
     this.lastPhysicalHeight = height
     await this.mediaPlayer.setWindowSize(width, height)

@@ -129,7 +129,6 @@
               placeholder="音轨"
               @change="onAudioTrackChange"
             >
-              <el-option :key="'audio-none'" :label="'默认音轨'" :value="null" />
               <el-option
                 v-for="track in audioTracks"
                 :key="`audio-${track.id}`"
@@ -145,7 +144,7 @@
               placeholder="字幕"
               @change="onSubtitleTrackChange"
             >
-              <el-option :key="'sub-none'" label="无字幕" :value="null" />
+              <el-option :key="'sub-none'" label="无字幕" :value="'none'" />
               <el-option
                 v-for="track in subtitleTracks"
                 :key="`sub-${track.id}`"
@@ -257,7 +256,7 @@ const tracks = ref<PlayerTrack[]>([])
 const audioTracks = computed(() => tracks.value.filter(t => t.type === 'audio'))
 const subtitleTracks = computed(() => tracks.value.filter(t => t.type === 'sub'))
 const selectedAudioTrackId = ref<number | null>(null)
-const selectedSubtitleTrackId = ref<number | null>(null)
+const selectedSubtitleTrackId = ref<number | 'none' | null>(null)
 
 function refreshPlaylistFromSDK() {
   playlist.value = sdk.getPlaylist().map((m) => ({
@@ -378,7 +377,7 @@ const refreshTracks = async () => {
       const currentAudio = audioTracks.value.find(t => t.selected) || null
       const currentSub = subtitleTracks.value.find(t => t.selected) || null
       selectedAudioTrackId.value = currentAudio ? currentAudio.id : null
-      selectedSubtitleTrackId.value = currentSub ? currentSub.id : null
+      selectedSubtitleTrackId.value = currentSub ? currentSub.id : 'none'
     } else {
       tracks.value = []
       selectedAudioTrackId.value = null
@@ -523,7 +522,7 @@ const onAudioTrackChange = async (value: number | null) => {
   }
 }
 
-const onSubtitleTrackChange = async (value: number | null) => {
+const onSubtitleTrackChange = async (value: number | 'none') => {
   selectedSubtitleTrackId.value = value
   try {
     const id = typeof value === 'number' && value > 0 ? value : null
