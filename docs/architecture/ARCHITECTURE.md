@@ -579,9 +579,7 @@ The application exposes **track selection** (audio / subtitle) as a first-class 
     *   `ControlView.vue`:
         *   Calls `sdk.getTracks()` when a new video is played or when playback first reaches `playing/paused` to populate local `tracks`.
         *   Derives `audioTracks` / `subtitleTracks` from the full list and tracks current selection via `selectedAudioTrackId` / `selectedSubtitleTrackId`.
-        *   Renders two `el-select` controls in the control bar:
-            *   **Audio**: choose specific audio tracks or fall back to “默认音轨”.
-            *   **Subtitles**: choose between available subtitle tracks or “无字幕”.
+        *   Renders **audio** and **subtitle** track selectors in the **Settings panel** (see §5.7), not in the main control bar.
         *   On selection change, calls `sdk.setAudioTrack(...)` / `sdk.setSubtitleTrack(...)`, which flow through IPC to mpv.
 
 ### 5.6 Default Language Preferences (mpv)
@@ -597,6 +595,20 @@ To make audio and subtitle selection consistent across all media, the mpv integr
 *   **Interaction with Track Selection UI**:
     *   The UI’s initial `getTracks()` call sees the mpv-selected tracks (with `selected: true`) and binds them as the initial selection in the audio/subtitle dropdowns.
     *   User overrides via `setAudioTrack` / `setSubtitleTrack` take precedence over the automatic selection for the current session, but do not change the global preferences.
+
+### 5.7 Settings Panel (Renderer)
+
+Playback-related options that are not needed on every interaction are grouped in a **Settings panel** in `ControlView.vue`, opened via the ⚙️ (settings) button in the control bar. The panel is a slide-out panel (same layout pattern as the playlist panel: top-right, same dimensions). Only one of **Settings** or **Playlist** can be open at a time; opening one closes the other.
+
+*   **Contents of the Settings panel**:
+    *   **音轨**: `el-select` for audio track selection (same data and handlers as former control-bar dropdown).
+    *   **字幕**: `el-select` for subtitle track selection, including “无字幕” (`value="none"` → `setSubtitleTrack(null)`).
+    *   **循环播放**: Toggle button bound to `sdk.getLoop()` / `sdk.toggleLoop()`.
+    *   **随机播放**: Toggle button bound to `sdk.getShuffle()` / `sdk.toggleShuffle()`.
+    *   **HDR**: Toggle button for HDR (macOS only, `!isWindows`); bound to existing `toggleHdr` / `hdrEnabled` state.
+*   **Control bar (main strip)** after migration:
+    *   Left: previous / play-pause / next / stop.
+    *   Right: **Playlist** (📋), **Settings** (⚙️), **Fullscreen** (⛶), **Volume** (slider + mute). No inline track selectors, loop, shuffle, or HDR.
 
 ## 6. Frontend SDK Design
 

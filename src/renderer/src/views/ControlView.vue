@@ -43,6 +43,86 @@
         </span>
       </div>
     </div>
+    <div v-if="showSettings" class="settings-panel">
+      <div class="settings-header">
+        <span class="settings-title">设置</span>
+        <button class="settings-close" @click="toggleSettings">×</button>
+      </div>
+      <div class="settings-body">
+        <div class="settings-section">
+          <span class="settings-label">音轨</span>
+          <el-select
+            v-if="audioTracks.length > 0"
+            v-model="selectedAudioTrackId"
+            class="settings-select"
+            size="small"
+            placeholder="音轨"
+            @change="onAudioTrackChange"
+          >
+            <el-option
+              v-for="track in audioTracks"
+              :key="`audio-${track.id}`"
+              :label="formatAudioTrackLabel(track)"
+              :value="track.id"
+            />
+          </el-select>
+          <span v-else class="settings-hint">无可用音轨</span>
+        </div>
+        <div class="settings-section">
+          <span class="settings-label">字幕</span>
+          <el-select
+            v-if="subtitleTracks.length > 0"
+            v-model="selectedSubtitleTrackId"
+            class="settings-select"
+            size="small"
+            placeholder="字幕"
+            @change="onSubtitleTrackChange"
+          >
+            <el-option :key="'sub-none'" label="无字幕" :value="'none'" />
+            <el-option
+              v-for="track in subtitleTracks"
+              :key="`sub-${track.id}`"
+              :label="formatSubtitleTrackLabel(track)"
+              :value="track.id"
+            />
+          </el-select>
+          <span v-else class="settings-hint">无可用字幕</span>
+        </div>
+        <div class="settings-section settings-row">
+          <span class="settings-label">循环播放</span>
+          <button
+            type="button"
+            class="settings-toggle"
+            :class="{ active: sdk.getLoop() }"
+            @click="toggleLoop"
+          >
+            {{ sdk.getLoop() ? '🔁 开' : '➡️ 关' }}
+          </button>
+        </div>
+        <div class="settings-section settings-row">
+          <span class="settings-label">随机播放</span>
+          <button
+            type="button"
+            class="settings-toggle"
+            :class="{ active: sdk.getShuffle() }"
+            @click="toggleShuffle"
+          >
+            {{ sdk.getShuffle() ? '🔀 开' : '▶️ 关' }}
+          </button>
+        </div>
+        <div v-if="!isWindows" class="settings-section settings-row">
+          <span class="settings-label">HDR</span>
+          <button
+            type="button"
+            class="settings-toggle"
+            :class="{ active: hdrEnabled }"
+            @click="toggleHdr"
+          >
+            {{ hdrEnabled ? 'HDR 开' : 'SDR' }}
+          </button>
+        </div>
+      </div>
+    </div>
     <div v-if="showPlaylist" class="playlist-panel">
       <div class="playlist-header">
         <span class="playlist-title">播放列表</span>
@@ -115,51 +195,6 @@
           </div>
           <div class="control-right">
             <button @click="togglePlaylist" class="btn-control" title="播放列表">📋</button>
-            <button @click="toggleLoop" class="btn-control" :title="sdk.getLoop() ? '关闭循环' : '开启循环'">
-              {{ sdk.getLoop() ? '🔁' : '➡️' }}
-            </button>
-            <button @click="toggleShuffle" class="btn-control" :title="sdk.getShuffle() ? '关闭随机' : '开启随机'">
-              {{ sdk.getShuffle() ? '🔀' : '▶️' }}
-            </button>
-            <el-select
-              v-if="audioTracks.length > 0"
-              v-model="selectedAudioTrackId"
-              class="track-select"
-              size="small"
-              placeholder="音轨"
-              @change="onAudioTrackChange"
-            >
-              <el-option
-                v-for="track in audioTracks"
-                :key="`audio-${track.id}`"
-                :label="formatAudioTrackLabel(track)"
-                :value="track.id"
-              />
-            </el-select>
-            <el-select
-              v-if="subtitleTracks.length > 0"
-              v-model="selectedSubtitleTrackId"
-              class="track-select"
-              size="small"
-              placeholder="字幕"
-              @change="onSubtitleTrackChange"
-            >
-              <el-option :key="'sub-none'" label="无字幕" :value="'none'" />
-              <el-option
-                v-for="track in subtitleTracks"
-                :key="`sub-${track.id}`"
-                :label="formatSubtitleTrackLabel(track)"
-                :value="track.id"
-              />
-            </el-select>
-            <button
-              v-if="!isWindows"
-              @click="toggleHdr"
-              class="btn-control"
-              :title="hdrEnabled ? '关闭HDR' : '开启HDR'"
-            >
-              {{ hdrEnabled ? 'HDR' : 'SDR' }}
-            </button>
             <button @click="toggleFullscreen" class="btn-control" title="全屏">⛶</button>
             <div class="volume-control">
               <button @click="toggleMute" class="btn-control" :title="volume > 0 ? '静音' : '取消静音'">
@@ -180,7 +215,7 @@
               />
               <span class="volume-percent">{{ volume }}%</span>
             </div>
-            <button class="btn-control" title="设置">⚙️</button>
+            <button @click="toggleSettings" class="btn-control" title="设置">⚙️</button>
           </div>
         </div>
       </div>
@@ -251,6 +286,7 @@ interface PlayerTrack {
 const sdk = getPlayerSDK()
 const playlist = ref<PlaylistItem[]>([])
 const showPlaylist = ref(false)
+const showSettings = ref(false)
 const currentPath = ref<string | null>(null)
 const tracks = ref<PlayerTrack[]>([])
 const audioTracks = computed(() => tracks.value.filter(t => t.type === 'audio'))
@@ -544,7 +580,15 @@ const formatTime = (seconds: number): string => {
 const togglePlaylist = () => {
   showPlaylist.value = !showPlaylist.value
   if (showPlaylist.value) {
+    showSettings.value = false
     refreshPlaylistFromSDK()
+  }
+}
+
+const toggleSettings = () => {
+  showSettings.value = !showSettings.value
+  if (showSettings.value) {
+    showPlaylist.value = false
   }
 }
 
@@ -930,6 +974,98 @@ onUnmounted(() => {
   opacity: 1;
 }
 
+.settings-panel {
+  position: absolute;
+  top: 40px;
+  right: 0;
+  bottom: 80px;
+  width: 280px;
+  background: rgba(0, 0, 0, 0.85);
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  will-change: transform, opacity;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.settings-title {
+  font-weight: 500;
+}
+
+.settings-close {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+.settings-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-section.settings-row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings-label {
+  color: #ddd;
+  font-size: 0.85rem;
+}
+
+.settings-select {
+  width: 100%;
+}
+
+.settings-hint {
+  color: #888;
+  font-size: 0.8rem;
+}
+
+.settings-toggle {
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ddd;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.settings-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.settings-toggle.active {
+  background: rgba(79, 70, 229, 0.5);
+  border-color: #4f46e5;
+  color: #fff;
+}
+
 .playlist-panel {
   position: absolute;
   top: 40px;
@@ -1126,6 +1262,7 @@ onUnmounted(() => {
 
 /* 确保 loading-overlay 和 playlist-panel 始终可见（如果它们需要显示） */
 .control-view.controls-hidden .loading-overlay,
+.control-view.controls-hidden .settings-panel,
 .control-view.controls-hidden .playlist-panel {
   opacity: 1;
   pointer-events: auto;
