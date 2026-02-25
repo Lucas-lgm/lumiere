@@ -11,6 +11,8 @@ if [ ! -d "$PROJECT_ROOT/mpv" ]; then
     exit 1
 fi
 
+export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-11.0}"
+
 # Add ffmpeg pkg-config paths
 export PKG_CONFIG_PATH="/opt/homebrew/opt/ffmpeg-full/lib/pkgconfig:/opt/homebrew/opt/ffmpeg/lib/pkgconfig:$PKG_CONFIG_PATH"
 
