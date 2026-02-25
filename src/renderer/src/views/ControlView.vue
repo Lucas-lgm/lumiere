@@ -876,6 +876,10 @@ onUnmounted(() => {
   cursor: none;
 }
 
+.video-not-ready {
+  background: rgba(0, 0, 0, 1);
+}
+
 /* Removed .control-view.video-not-ready background to prevent blocking video window */
 
 .loading-overlay {

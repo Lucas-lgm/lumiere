@@ -9,7 +9,10 @@ set -e
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$DIR"
-VENDOR_LIB="$PROJECT_ROOT/vendor/mpv/darwin-arm64/lib"
+
+# 架构参数，默认为 arm64，可传入 x64 等
+ARCH="${1:-arm64}"
+VENDOR_LIB="$PROJECT_ROOT/vendor/mpv/darwin-$ARCH/lib"
 
 # 确保目标目录存在
 mkdir -p "$VENDOR_LIB"
