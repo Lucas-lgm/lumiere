@@ -150,6 +150,7 @@ export class LibMPVController extends EventEmitter {
         // Windows: 使用 wid 嵌入 (vo=gpu-next)
         if (process.platform === 'darwin') {
           await this.setOption('vo', 'libmpv')
+          // await this.setOption('ao', 'avfoundation')
           console.log('[libmpv] ✅ Set vo=libmpv for render API (macOS)')
         } else if (process.platform === 'win32') {
           await this.setOption('vo', 'gpu-next')
