@@ -222,7 +222,7 @@ class CorePlayerImpl extends EventEmitter implements CorePlayer {
       //   this.renderManager.setMediaPlayer(this.mediaPlayer)
       // }
       
-      // this.setupResizeHandler()
+      this.setupResizeHandler()
       this.setupEventHandlers()
 
       if (warmup && this.mediaPlayer instanceof MpvMediaPlayer) {
