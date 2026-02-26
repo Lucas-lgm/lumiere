@@ -531,9 +531,12 @@ static void log_hdr_config(GLRenderContext *rc) {
     CGFloat contentsScale = 0.0;
     CALayer *layer = get_render_layer(rc);
     if (layer) {
-        if (@available(macOS 10.15, *)) {
+        // 只有在使用 macOS 14+ SDK 时才编译 EDR 属性访问，避免旧 SDK 编译错误
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 140000
+        if (@available(macOS 14.0, *)) {
             wantsEDR = layer.wantsExtendedDynamicRangeContent;
         }
+#endif
         contentsScale = layer.contentsScale;
     }
     
@@ -625,10 +628,7 @@ static void update_hdr_mode(GLRenderContext *rc, bool forceApply) {
         mpv_set_property_string(rc->mpvHandle, "target-trc", "pq");
         mpv_set_property_string(rc->mpvHandle, "target-colorspace-hint", "yes");
         
-        // 禁用动态峰值检测（hdr-compute-peak），让系统使用静态峰值
-        // 这可以避免动态检测导致的过曝问题
-        int hdrComputePeak = 0;
-        mpv_set_property(rc->mpvHandle, "hdr-compute-peak", MPV_FORMAT_FLAG, &hdrComputePeak);
+        mpv_set_property_string(rc->mpvHandle, "hdr-compute-peak", "auto");
         
         // 手动设置 target-peak 以避免过曝
         // macOS 的 auto 模式可能使用了过高的峰值亮度值（如 10000 nits 的标称值）
@@ -638,8 +638,12 @@ static void update_hdr_mode(GLRenderContext *rc, bool forceApply) {
         if (rc->view.window) {
             screen = rc->view.window.screen;
         }
-        if (screen && @available(macOS 10.15, *)) {
-            edr = screen.maximumPotentialExtendedDynamicRangeColorComponentValue;
+        if (screen) {
+            if (@available(macOS 10.15, *)) {
+                edr = screen.maximumPotentialExtendedDynamicRangeColorComponentValue;
+            } else {
+                edr = 1.0;
+            }
         }
         
         // 检测是否是 Dolby Vision 视频
@@ -668,9 +672,16 @@ static void update_hdr_mode(GLRenderContext *rc, bool forceApply) {
             } else {
                 displayPeakNits = 2000; // 顶级 HDR 显示器（如 OLED）
             }
+
+            // 针对 macOS 13 及以下做保守处理，限制最大峰值，避免过爆
+            if (!@available(macOS 14.0, *)) {
+                if (displayPeakNits > 400) {
+                    displayPeakNits = 400;
+                }
+            }
             
-            // 对于普通 HDR 视频，使用显示器的实际峰值亮度
-            // 这样可以充分利用显示器的能力，获得更好的对比度和亮度表现
+            // 对于普通 HDR 视频，使用（可能被限制后的）显示器峰值亮度
+            // 这样可以充分利用显示器的能力，同时在旧系统上避免过曝
             if (isDolbyVision) {
                 // Dolby Vision 需要更保守的设置，因为它本身已经有动态色调映射
                 // 使用显示器峰值的 55%，稍微提高亮度（从 50% 提升）
@@ -702,8 +713,19 @@ static void update_hdr_mode(GLRenderContext *rc, bool forceApply) {
                     }
                 }
             } else {
-                // 普通 HDR：使用显示器的实际峰值亮度
-                targetPeakNits = displayPeakNits;
+                // 普通 HDR：使用保守系数，略微压制高光，特别是 macOS 13 等系统
+                double scale = 1.0;
+                if (!@available(macOS 14.0, *)) {
+                    // macOS 13：保守一点
+                    scale = 0.6;
+                }
+                targetPeakNits = (int64_t)(displayPeakNits * scale);
+                // 避免极端情况下过低导致整体发灰
+                if (!@available(macOS 14.0, *)) {
+                    if (targetPeakNits < 250) {
+                        targetPeakNits = 250;
+                    }
+                }
             }
         } else {
             // 没有 EDR 支持，使用 SDR 标准值
@@ -740,12 +762,14 @@ static void update_hdr_mode(GLRenderContext *rc, bool forceApply) {
             }
             
             // 启用 layer 的 EDR 支持 (macOS 14.0+)
-            if (@available(macOS 10.15, *)) {
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 140000
+            if (@available(macOS 14.0, *)) {
                 // 只在状态真的改变时才更新，避免不必要的重绘
                 if (layer.wantsExtendedDynamicRangeContent != YES) {
                     layer.wantsExtendedDynamicRangeContent = YES;
                 }
             }
+#endif
             
             // 设置正确的 HDR 色彩空间（PQ）
             CGColorSpaceRef cs = create_hdr_pq_colorspace_for_primaries(primaries);
@@ -796,12 +820,15 @@ static void update_hdr_mode(GLRenderContext *rc, bool forceApply) {
             [CATransaction setDisableActions:YES]; // 禁用动画，立即应用
             [CATransaction setAnimationDuration:0]; // 设置动画时长为 0
             
-            if (@available(macOS 10.15, *)) {
+            // 关闭 layer 的 EDR 支持 (macOS 14.0+)
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 140000
+            if (@available(macOS 14.0, *)) {
                 // 只在状态真的改变时才更新，避免不必要的重绘
                 if (layer.wantsExtendedDynamicRangeContent != NO) {
                     layer.wantsExtendedDynamicRangeContent = NO;
                 }
             }
+#endif
 
             CGColorSpaceRef cs = nullptr;
             NSScreen *screen = nil;
@@ -841,9 +868,12 @@ static void init_default_sdr_config(GLRenderContext *rc) {
     // 设置 layer 的色彩空间
     CALayer *layer = get_render_layer(rc);
     if (layer) {
-        if (@available(macOS 10.15, *)) {
+        // 初始化为 SDR 模式时，确保关闭 EDR (仅在 macOS 14.0+ SDK 上编译)
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 140000
+        if (@available(macOS 14.0, *)) {
             layer.wantsExtendedDynamicRangeContent = NO;
         }
+#endif
         
         CGColorSpaceRef cs = nullptr;
         NSScreen *screen = nil;
