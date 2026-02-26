@@ -531,7 +531,7 @@ static void log_hdr_config(GLRenderContext *rc) {
     CGFloat contentsScale = 0.0;
     CALayer *layer = get_render_layer(rc);
     if (layer) {
-        if (@available(macOS 14.0, *)) {
+        if (@available(macOS 10.15, *)) {
             wantsEDR = layer.wantsExtendedDynamicRangeContent;
         }
         contentsScale = layer.contentsScale;
@@ -740,7 +740,7 @@ static void update_hdr_mode(GLRenderContext *rc, bool forceApply) {
             }
             
             // 启用 layer 的 EDR 支持 (macOS 14.0+)
-            if (@available(macOS 14.0, *)) {
+            if (@available(macOS 10.15, *)) {
                 // 只在状态真的改变时才更新，避免不必要的重绘
                 if (layer.wantsExtendedDynamicRangeContent != YES) {
                     layer.wantsExtendedDynamicRangeContent = YES;
@@ -780,20 +780,9 @@ static void update_hdr_mode(GLRenderContext *rc, bool forceApply) {
             screen = rc->view.window.screen;
         }
         
-        // 检测显示器的 primaries（通常是 bt.709 或 display-p3）
-        const char *targetPrim = "bt.709";  // 默认使用 bt.709
-        if (screen && screen.colorSpace) {
-            NSString *csName = screen.colorSpace.localizedName;
-            // macOS 的 Display P3 显示器应该使用 display-p3
-            if ([csName containsString:@"P3"] || [csName containsString:@"Display P3"]) {
-                targetPrim = "display-p3";
-            }
-        }
-        
-        // 明确设置 SDR 的 transfer function 为 sRGB
-        // 这确保正确的 gamma 曲线，避免画面偏灰
-        mpv_set_property_string(rc->mpvHandle, "target-prim", targetPrim);
-        mpv_set_property_string(rc->mpvHandle, "target-trc", "srgb");
+        // SDR 下依赖 ICC + mpv 自动判断色彩空间，避免对显示器色域做硬编码
+        mpv_set_property_string(rc->mpvHandle, "target-prim", "auto");
+        mpv_set_property_string(rc->mpvHandle, "target-trc", "auto");
         mpv_set_property_string(rc->mpvHandle, "target-peak", "auto");
         mpv_set_property_string(rc->mpvHandle, "target-colorspace-hint", "yes");
         mpv_set_property_string(rc->mpvHandle, "hdr-compute-peak", "auto");
@@ -807,7 +796,7 @@ static void update_hdr_mode(GLRenderContext *rc, bool forceApply) {
             [CATransaction setDisableActions:YES]; // 禁用动画，立即应用
             [CATransaction setAnimationDuration:0]; // 设置动画时长为 0
             
-            if (@available(macOS 14.0, *)) {
+            if (@available(macOS 10.15, *)) {
                 // 只在状态真的改变时才更新，避免不必要的重绘
                 if (layer.wantsExtendedDynamicRangeContent != NO) {
                     layer.wantsExtendedDynamicRangeContent = NO;
@@ -852,7 +841,7 @@ static void init_default_sdr_config(GLRenderContext *rc) {
     // 设置 layer 的色彩空间
     CALayer *layer = get_render_layer(rc);
     if (layer) {
-        if (@available(macOS 14.0, *)) {
+        if (@available(macOS 10.15, *)) {
             layer.wantsExtendedDynamicRangeContent = NO;
         }
         
@@ -883,19 +872,9 @@ static void init_default_sdr_config(GLRenderContext *rc) {
         screen = rc->view.window.screen;
     }
     
-    // 检测显示器的 primaries（通常是 bt.709 或 display-p3）
-    const char *targetPrim = "bt.709";
-    if (screen && screen.colorSpace) {
-        NSString *csName = screen.colorSpace.localizedName;
-        if ([csName containsString:@"P3"] || [csName containsString:@"Display P3"]) {
-            targetPrim = "display-p3";
-        }
-    }
-    
-    // 明确设置 SDR 的 transfer function 为 sRGB
-    // 这确保正确的 gamma 曲线，避免画面偏灰
-    mpv_set_property_string(rc->mpvHandle, "target-prim", targetPrim);
-    mpv_set_property_string(rc->mpvHandle, "target-trc", "srgb");
+    // SDR 下依赖 ICC + mpv 自动判断色彩空间，避免对显示器色域做硬编码
+    mpv_set_property_string(rc->mpvHandle, "target-prim", "auto");
+    mpv_set_property_string(rc->mpvHandle, "target-trc", "auto");
     mpv_set_property_string(rc->mpvHandle, "target-peak", "auto");
     mpv_set_property_string(rc->mpvHandle, "target-colorspace-hint", "yes");
     mpv_set_property_string(rc->mpvHandle, "hdr-compute-peak", "auto");

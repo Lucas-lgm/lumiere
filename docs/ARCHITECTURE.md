@@ -67,6 +67,37 @@
 ## 文档更新说明
 
 - 本文档会随着构建脚本和 vendor 目录结构的变更同步更新。
+
+## macOS 显示管线与 HDR/SDR 策略（简要）
+
+- **视频层判定（是否 HDR）**
+  - 仅依赖 mpv 的视频参数：`video-params/gamma` 与 `video-params/primaries`。
+  - 当 `gamma ∈ {hlg, pq}` 且 `primaries != "bt.709"` 时认为是 HDR 视频；否则视为 SDR。
+
+- **显示与 ICC 层（不硬编码 P3 / bt.709）**
+  - layer 颜色空间优先使用 `NSScreen.colorSpace.CGColorSpace`，缺失时回退到 `kCGColorSpaceSRGB`。
+  - SDR 模式下启用 `icc-profile-auto = 1`，并将 mpv 的：
+    - `target-prim = "auto"`
+    - `target-trc = "auto"`
+    - `target-peak = "auto"`
+    - `target-colorspace-hint = "yes"`
+    - `hdr-compute-peak = "auto"`
+  - 不再依据 `screen.colorSpace.localizedName` 中是否包含 `"P3"` / `"Display P3"` 去硬编码 `"display-p3"` 或 `"bt.709"`，避免与 ICC/profile、本地化或三方显示器信息冲突。
+
+- **HDR / EDR 启用条件**
+  - 仅在以下条件同时满足时开启 HDR/EDR：
+    - 用户显式开启 HDR（`hdrUserEnabled`）。
+    - 视频满足 HDR 判定（见上文）。
+    - 当前屏幕的 `maximumPotentialExtendedDynamicRangeColorComponentValue > 1.0`（macOS 10.15+）。
+  - HDR 模式下：
+    - 关闭 `icc-profile-auto`，避免 ICC 干扰 PQ HDR 渲染。
+    - 直接使用视频的 `primaries` 作为 `target-prim`，并将 `target-trc` 固定为 `"pq"`。
+    - 基于屏幕 EDR 值、Dolby Vision 信号与 `sig-peak` 计算 `target-peak`，并选择合适的 `tone-mapping` 算法（普通 HDR 使用 `bt.2390`，Dolby Vision 使用 `st2094-10`）。
+
+- **系统版本与 `wantsExtendedDynamicRangeContent`**
+  - 对 `CALayer.wantsExtendedDynamicRangeContent` 的读写使用 `@available(macOS 10.15, *)` 保护，而非 14.0。
+  - 只要系统支持 EDR API（10.15+），并且满足上述 HDR 条件，就会为渲染 layer 打开 EDR；在 SDR 模式或初始化时则显式关闭。
+
 ### CoreAudio 崩溃与兜底方案（macOS 26 / 嵌入式 libmpv）
 
 - **现象**：在无 GUI 的 libmpv 构建下，于 macOS 26（或部分嵌入式场景）初始化 CoreAudio 时，在 `ca_select_device` 路径发生崩溃（PC=0，空函数指针调用）。栈指向 `libmpv.2.dylib ca_select_device` → `init` → `ao_init` → `ao_init_best`。
