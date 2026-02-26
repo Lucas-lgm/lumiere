@@ -37,4 +37,8 @@ native/Debug/
 build/Release/
 build/Debug/
 *.node
-# docs/
+
+# mpv submodule build & crash reports
+mpv/build/
+report.txt
+mpv.zip

@@ -21,10 +21,54 @@ cd "$PROJECT_ROOT/mpv"
 echo "Configuring mpv build..."
 # Ensure build directory exists
 if [ ! -d "build" ]; then
-    meson setup build --buildtype=release -Dlibmpv=true -Dcplayer=false -Dswift-build=enabled -Dmanpage-build=disabled -Dhtml-build=disabled -Dtests=false
+    meson setup build --buildtype=release \
+        -Dlibmpv=true \
+        -Dcplayer=false \
+        -Dcocoa=disabled \
+        -Dmacos-cocoa-cb=disabled \
+        -Dmacos-media-player=disabled \
+        -Dmacos-touchbar=disabled \
+        -Dswift-build=disabled \
+        -Dmanpage-build=disabled \
+        -Dhtml-build=disabled \
+        -Dpdf-build=disabled \
+        -Dtests=false \
+        -Dbuild-date=false \
+        -Dlua=enabled \
+        -Dcdda=disabled \
+        -Ddvdnav=disabled \
+        -Ddvbin=disabled \
+        -Dlibarchive=disabled \
+        -Dlibbluray=disabled \
+        -Dvapoursynth=disabled \
+        -Dx11-clipboard=disabled \
+        -Djavascript=disabled \
+        -Dcplugins=disabled
 else
     echo "Build directory exists, reconfiguring..."
-    meson setup build --reconfigure --buildtype=release -Dlibmpv=true -Dcplayer=false -Dswift-build=enabled -Dmanpage-build=disabled -Dhtml-build=disabled -Dtests=false
+    meson setup build --reconfigure --buildtype=release \
+        -Dlibmpv=true \
+        -Dcplayer=false \
+        -Dcocoa=disabled \
+        -Dmacos-cocoa-cb=disabled \
+        -Dmacos-media-player=disabled \
+        -Dmacos-touchbar=disabled \
+        -Dswift-build=disabled \
+        -Dmanpage-build=disabled \
+        -Dhtml-build=disabled \
+        -Dpdf-build=disabled \
+        -Dtests=false \
+        -Dbuild-date=false \
+        -Dlua=enabled \
+        -Dcdda=disabled \
+        -Ddvdnav=disabled \
+        -Ddvbin=disabled \
+        -Dlibarchive=disabled \
+        -Dlibbluray=disabled \
+        -Dvapoursynth=disabled \
+        -Dx11-clipboard=disabled \
+        -Djavascript=disabled \
+        -Dcplugins=disabled
 fi
 
 echo "Compiling mpv..."

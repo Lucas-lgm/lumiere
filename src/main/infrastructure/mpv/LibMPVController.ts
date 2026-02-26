@@ -146,12 +146,12 @@ export class LibMPVController extends EventEmitter {
       // 在初始化前设置选项
       // 注意：libmpv 默认已经设置了 no-terminal，不需要再设置
       try {
-        // macOS: 使用 render API (vo=libmpv)
+        // macOS: 使用 render API (vo=libmpv) + avfoundation 音频（避免 CoreAudio AO 崩溃）
         // Windows: 使用 wid 嵌入 (vo=gpu-next)
         if (process.platform === 'darwin') {
           await this.setOption('vo', 'libmpv')
-          // await this.setOption('ao', 'avfoundation')
-          console.log('[libmpv] ✅ Set vo=libmpv for render API (macOS)')
+          await this.setOption('ao', 'avfoundation')
+          console.log('[libmpv] ✅ Set vo=libmpv, ao=avfoundation for macOS')
         } else if (process.platform === 'win32') {
           await this.setOption('vo', 'gpu-next')
           console.log('[libmpv] ✅ Set vo=gpu-next for wid mode (Windows)')
@@ -194,14 +194,10 @@ export class LibMPVController extends EventEmitter {
       } catch (error) {
         console.warn('[libmpv] Failed to set language preferences (alang/slang):', error)
       }
-      
-      try {
-        await this.setOption('input-default-bindings', true)
-        await this.setOption('input-vo-keyboard', true)
-        await this.setOption('input-media-keys', true)
-      } catch (error) {
-        // 忽略
-      }
+
+      // await this.setOption('ao', 'null')
+      // 或者 'ao', 'lavfi-null' 之类，先确保完全不走 CoreAudio
+
       
       try {
         await this.setOption('profile', 'fast')
@@ -690,18 +686,11 @@ export class LibMPVController extends EventEmitter {
   }
 
   /**
-   * 发送按键事件
+   * 发送按键事件（当前禁用：不再向 mpv 转发键盘事件）
    */
-  async keypress(key: string): Promise<void> {
-    if (this.instanceId === null) {
-      console.warn('[libmpv] Cannot send keypress: MPV instance not initialized')
-      return
-    }
-    try {
-      await this.command('keypress', key)
-    } catch (error) {
-      console.warn(`[libmpv] Failed to send keypress ${key}:`, error)
-    }
+  async keypress(_key: string): Promise<void> {
+    // 为避免键盘事件引发崩溃，这里直接禁用转发。
+    return
   }
 
   /**

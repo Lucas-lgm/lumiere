@@ -4,5 +4,5 @@
  * macOS 26 / 嵌入式场景下触发空指针崩溃（ca_select_device）。
  */
 if (process.platform === 'darwin') {
-  // process.env.MPV_COREAUDIO_FORCE_DEFAULT = '1'
+  process.env.MPV_COREAUDIO_FORCE_DEFAULT = '1'
 }
