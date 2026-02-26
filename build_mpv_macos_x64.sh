@@ -59,7 +59,7 @@ if [ ! -d "build" ]; then
         -Dpdf-build=disabled \
         -Dtests=false \
         -Dbuild-date=false \
-        -Dlua=enabled \
+        -Dlua=disabled \
         -Dcdda=disabled \
         -Ddvdnav=disabled \
         -Ddvbin=disabled \
@@ -84,7 +84,7 @@ else
         -Dpdf-build=disabled \
         -Dtests=false \
         -Dbuild-date=false \
-        -Dlua=enabled \
+        -Dlua=disabled \
         -Dcdda=disabled \
         -Ddvdnav=disabled \
         -Ddvbin=disabled \

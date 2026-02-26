@@ -18,7 +18,7 @@
   - 行为：
     - 在 `mpv/` 目录中使用 `meson setup build` + `meson compile -C build` 构建 **纯 libmpv 内核**（`-Dlibmpv=true -Dcplayer=false`，不包含 mpv CLI）
     - 显式禁用 mpv 自带的 macOS GUI / Cocoa / Swift 集成：`-Dcocoa=disabled -Dmacos-cocoa-cb=disabled -Dmacos-media-player=disabled -Dmacos-touchbar=disabled -Dswift-build=disabled`
-    - 为减小体积与依赖，额外禁用：`cdda/dvdnav/dvbin/libarchive/libbluray/vapoursynth/x11-clipboard/javascript/cplugins`，以及 `build-date/manpage/html/pdf-build`
+    - 为减小体积与依赖，额外禁用：`cdda/dvdnav/dvbin/libarchive/libbluray/vapoursynth/x11-clipboard/javascript/cplugins/lua`，以及 `build-date/manpage/html/pdf-build`
     - 调用 `copy_dependencies.sh`（不带参数，默认 `arm64`）复制依赖
     - 输出位置：`vendor/mpv/darwin-arm64`
 
@@ -26,7 +26,7 @@
   - 目标平台：**macOS x64 (Intel)**  
   - 依赖前提：通过 `/usr/local` 安装的 ffmpeg / ffmpeg-full（Intel Homebrew 默认前缀）
   - 行为：
-    - 在 `mpv/` 目录中使用与 `build_mpv.sh` 相同的「无 GUI、最小依赖」Meson 配置构建 `libmpv.2.dylib`（同上：禁用 Cocoa/Swift 及 cdda/dvdnav/vapoursynth 等可选功能）
+    - 在 `mpv/` 目录中使用与 `build_mpv.sh` 相同的「无 GUI、最小依赖」Meson 配置构建 `libmpv.2.dylib`（同上：禁用 Cocoa/Swift 及 cdda/dvdnav/vapoursynth/lua 等可选功能）
     - 调用 `copy_dependencies.sh x64` 复制依赖
     - 输出位置：`vendor/mpv/darwin-x64`
 
