@@ -427,7 +427,7 @@ class CorePlayerImpl extends EventEmitter implements CorePlayer {
   }
 
   getStatus(): PlayerStatus | null {
-    return this.mediaPlayer.getStatus()
+    return this.stateMachine.getState()
   }
 
   async cleanup(): Promise<void> {
