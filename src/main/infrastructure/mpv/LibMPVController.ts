@@ -146,12 +146,16 @@ export class LibMPVController extends EventEmitter {
       // 在初始化前设置选项
       // 注意：libmpv 默认已经设置了 no-terminal，不需要再设置
       try {
-        // macOS: 使用 render API (vo=libmpv) + avfoundation 音频（避免 CoreAudio AO 崩溃）
+        // macOS: 使用 render API (vo=libmpv)
+        // 使用 MPV_COREAUDIO_FORCE_DEFAULT 环境变量强制使用默认设备，避免热插拔崩溃
+
         // Windows: 使用 wid 嵌入 (vo=gpu-next)
         if (process.platform === 'darwin') {
+
+          // 配合 MPV_COREAUDIO_FORCE_DEFAULT 环境变量使用
           await this.setOption('vo', 'libmpv')
-          await this.setOption('ao', 'avfoundation')
-          console.log('[libmpv] ✅ Set vo=libmpv, ao=avfoundation for macOS')
+
+          console.log('[libmpv] ✅ Set vo=libmpv for macOS (with MPV_COREAUDIO_FORCE_DEFAULT)')
         } else if (process.platform === 'win32') {
           await this.setOption('vo', 'gpu-next')
           console.log('[libmpv] ✅ Set vo=gpu-next for wid mode (Windows)')
