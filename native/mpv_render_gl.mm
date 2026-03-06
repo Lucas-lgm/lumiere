@@ -627,9 +627,12 @@ static void update_hdr_mode(GLRenderContext *rc, bool forceApply) {
         }
         mpv_set_property_string(rc->mpvHandle, "target-trc", "pq");
         mpv_set_property_string(rc->mpvHandle, "target-colorspace-hint", "yes");
-        
-        mpv_set_property_string(rc->mpvHandle, "hdr-compute-peak", "auto");
-        
+
+        // 禁用动态峰值检测（hdr-compute-peak），让系统使用静态峰值
+        // 这可以避免动态检测导致的过曝问题
+        int hdrComputePeak = 0;
+        mpv_set_property(rc->mpvHandle, "hdr-compute-peak", MPV_FORMAT_FLAG, &hdrComputePeak);
+
         // 手动设置 target-peak 以避免过曝
         // macOS 的 auto 模式可能使用了过高的峰值亮度值（如 10000 nits 的标称值）
         // 我们需要基于实际的显示器能力设置更保守的值
@@ -649,89 +652,58 @@ static void update_hdr_mode(GLRenderContext *rc, bool forceApply) {
         // 检测是否是 Dolby Vision 视频
         // Dolby Vision 需要特殊处理，因为它有动态色调映射，target-peak 过高会导致过曝
         bool isDolbyVision = check_dolby_vision_track(rc->mpvHandle);
-        
-        // 根据 EDR 值和视频实际参数计算 target-peak
-        // 不根据容器格式区分，因为格式本身不影响 HDR 渲染
-        // 真正影响亮度的是：视频的 sig-peak、Dolby Vision 特性、显示器能力
+
+        // 根据 EDR 值直接设置 target-peak（参考行业标准）
+        // target-peak 应该接近显示器实际可用亮度，而非理论最大值
+        // 设置太高会导致过曝（禁用了 tone mapping），太低会导致画面发暗
         int64_t targetPeakNits = 0;
         if (edr > 1.0) {
-            // 根据 EDR 值映射到显示器的实际峰值亮度（nits）
-            // EDR 值表示相对于 sRGB (100 nits) 的倍数，但实际 HDR 显示器的峰值通常更高
-            // 使用更准确的映射，让普通 HDR 视频能够充分利用显示器的峰值亮度
-            int64_t displayPeakNits = 0;
-            if (edr <= 1.5) {
-                displayPeakNits = 400; // HDR400 级别
-            } else if (edr <= 2.0) {
-                displayPeakNits = 600; // HDR600 级别
-            } else if (edr <= 2.5) {
-                displayPeakNits = 800; // HDR800 级别
-            } else if (edr <= 3.0) {
-                displayPeakNits = 1000; // HDR1000 级别
-            } else if (edr <= 4.0) {
-                displayPeakNits = 1400; // 高端 HDR 显示器
-            } else {
-                displayPeakNits = 2000; // 顶级 HDR 显示器（如 OLED）
-            }
+            // 检测是否是 Dolby Vision 视频
+            bool isDolbyVision = check_dolby_vision_track(rc->mpvHandle);
 
-            // 针对 macOS 13 及以下做保守处理，限制最大峰值，避免过爆
-            if (!@available(macOS 14.0, *)) {
-                if (displayPeakNits > 400) {
-                    displayPeakNits = 400;
-                }
-            }
-            
-            // 对于普通 HDR 视频，使用（可能被限制后的）显示器峰值亮度
-            // 这样可以充分利用显示器的能力，同时在旧系统上避免过曝
             if (isDolbyVision) {
                 // Dolby Vision 需要更保守的设置，因为它本身已经有动态色调映射
-                // 使用显示器峰值的 55%，稍微提高亮度（从 50% 提升）
-                // Dolby Vision 的动态色调映射已经处理了亮度映射，target-peak 过高会导致过曝
-                targetPeakNits = (int64_t)(displayPeakNits * 0.55);
-                // 确保最小值，但不要太高
-                if (targetPeakNits < 350) {
+                // target-peak 过高会导致过曝，使用行业标准推荐值
+                if (edr <= 2.0) {
                     targetPeakNits = 350;
+                } else if (edr <= 3.0) {
+                    targetPeakNits = 450;
+                } else {
+                    targetPeakNits = 550;
                 }
-                // 设置最大值上限，稍微提高（从 600 提升到 650）
-                if (targetPeakNits > 650) {
-                    targetPeakNits = 650;
-                }
-                
+
                 // 对于 Dolby Vision，如果视频的 sig-peak 可用且较低，进一步限制 target-peak
-                // 这样可以避免低峰值 Dolby Vision 视频过亮
-                if (sigPeakErr >= 0 && sigPeak > 0.1) {
-                    if (sigPeak < 2000.0) {
-                        // sig-peak 较低，使用更保守的值
-                        // 对于 Dolby Vision，使用 sig-peak 的 85% 作为上限（从 80% 提升）
-                        int64_t maxFromSigPeak = (int64_t)(sigPeak * 0.85);
-                        if (maxFromSigPeak < targetPeakNits) {
-                            targetPeakNits = maxFromSigPeak;
-                        }
-                        // 确保最小值，避免过低导致画面过暗
-                        if (targetPeakNits < 400) {
-                            targetPeakNits = 400;
-                        }
+                if (sigPeakErr >= 0 && sigPeak > 0.1 && sigPeak < 2000.0) {
+                    int64_t maxFromSigPeak = (int64_t)(sigPeak * 0.85);
+                    if (maxFromSigPeak < targetPeakNits) {
+                        targetPeakNits = maxFromSigPeak;
+                    }
+                    if (targetPeakNits < 400) {
+                        targetPeakNits = 400;
                     }
                 }
             } else {
-                // 普通 HDR：使用保守系数，略微压制高光，特别是 macOS 13 等系统
-                double scale = 1.0;
-                if (!@available(macOS 14.0, *)) {
-                    // macOS 13：保守一点
-                    scale = 0.6;
-                }
-                targetPeakNits = (int64_t)(displayPeakNits * scale);
-                // 避免极端情况下过低导致整体发灰
-                if (!@available(macOS 14.0, *)) {
-                    if (targetPeakNits < 250) {
-                        targetPeakNits = 250;
-                    }
+                // 普通 HDR：根据 EDR 值直接设置合理的 target-peak
+                // 参考行业标准：笔记本 250-300，桌面 300-400，中端 500，高端 800+
+                if (edr <= 1.5) {
+                    targetPeakNits = 250;  // 低端 HDR
+                } else if (edr <= 2.0) {
+                    targetPeakNits = 350;  // HDR400 级别
+                } else if (edr <= 2.5) {
+                    targetPeakNits = 450;  // HDR600 级别
+                } else if (edr <= 3.0) {
+                    targetPeakNits = 550;  // HDR1000 级别
+                } else if (edr <= 4.0) {
+                    targetPeakNits = 700;  // 高端 HDR
+                } else {
+                    targetPeakNits = 800;  // Apple XDR 等顶级显示器（保守值）
                 }
             }
         } else {
             // 没有 EDR 支持，使用 SDR 标准值
             targetPeakNits = 203;
         }
-        
+
         mpv_set_property(rc->mpvHandle, "target-peak", MPV_FORMAT_INT64, &targetPeakNits);
         
         // 显式设置色调映射算法
