@@ -669,7 +669,7 @@ static void update_hdr_mode(GLRenderContext *rc, bool forceApply) {
                 } else if (edr <= 3.0) {
                     targetPeakNits = 450;
                 } else {
-                    targetPeakNits = 550;
+                    targetPeakNits = 450;  // 高 EDR 显示器（如 Apple XDR）
                 }
 
                 // 对于 Dolby Vision，如果视频的 sig-peak 可用且较低，进一步限制 target-peak
@@ -694,9 +694,9 @@ static void update_hdr_mode(GLRenderContext *rc, bool forceApply) {
                 } else if (edr <= 3.0) {
                     targetPeakNits = 550;  // HDR1000 级别
                 } else if (edr <= 4.0) {
-                    targetPeakNits = 700;  // 高端 HDR
+                    targetPeakNits = 550;  // 高端 HDR
                 } else {
-                    targetPeakNits = 800;  // Apple XDR 等顶级显示器（保守值）
+                    targetPeakNits = 600;  // Apple XDR 等顶级显示器（保守值）
                 }
             }
         } else {
