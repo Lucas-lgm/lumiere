@@ -1,0 +1,64 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+out
+
+hls_output
+
+node_modules
+dist
+dist-electron
+*.local
+
+# Editor directories and files
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# IDE / AI tool config (keep local, don't commit)
+/.claude/
+/.cursor/
+/.trae/
+/.vscode/
+.cursorrules
+
+# Build deps (from build_deps_macos.sh)
+deps/
+
+# Large video files
+videos/
+
+# Native bindings
+native/build/
+native/Release/
+native/Debug/
+build/Release/
+build/Debug/
+*.node
+
+# Claude Code internal state
+.claude/worktrees/
+.superpowers/
+docs/superpowers/
+
+# Unrelated personal files
+iina/
+index.html
+
+# Template files (dev kits, scaffolding)
+templates/
+
+# mpv submodule build & crash reports
+mpv/build/
+report.txt
+mpv.zip

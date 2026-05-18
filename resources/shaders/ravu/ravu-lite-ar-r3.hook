@@ -1,0 +1,32 @@
+// 
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+// 
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+// 
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+//!DESC RAVU-Lite-AR (step1, r3)
+//!HOOK LUMA
+//!BIND HOOKED
+//!BIND ravu_lite_lut3
+//!SAVE ravu_lite_int
+//!WHEN HOOKED.w OUTPUT.w / 0.707106 < HOOKED.h OUTPUT.h / 0.707106 < *
+//!COMPONENTS 4
+vec4 hook() {
+float luma0 = HOOKED_texOff(vec2(-2.0, -2.0)).x;
+float luma1 = HOOKED_texOff(vec2(-2.0, -1.0)).x;
+float luma2 = HOOKED_texOff(vec2(-2.0, 0.0)).x;
+float luma3 = HOOKED_texOff(vec2(-2.0, 1.0)).x;
+float luma4 = HOOKED_texOff(vec2(-2.0, 2.0)).x;
+float luma5 = HOOKED_texOff(vec2(-1.0, -2.0)).x;
+float luma6 = HOOKED_texOff(vec2(-1.0, -1.0)).x;
+float luma7 = HOOKED_texOff(vec2(-1.0, 0.0)).x;
+
+... (172 more lines, 127809 bytes total)

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 60" width="320" height="60">
+  <title>Lumiere Wordmark</title>
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@1');
+    </style>
+  </defs>
+
+  <!--
+    Wordmark layout:
+      L mark: ~22px cap height (matching text visual weight)
+      Gap: 10px between mark right edge and text
+      Text: "Lumiere" in Instrument Serif Italic, 32px
+      Vertically centered in the 60px viewBox height
+
+    Monochrome: L mark uses currentColor (same as text).
+    On dark bg, set color: white. On light bg, set color: #1d1d1f.
+
+    For production: convert text element to outlined paths
+    to eliminate font dependency.
+  -->
+
+  <!-- L Mark — same proportions as app icon, scaled to 22px cap height -->
+  <!-- Scale: 22/68 = 0.324 (68 = path cap height in local coords) -->
+  <g transform="translate(18, 30)">
+    <g transform="skewX(-13) scale(0.324)">
+      <path fill="currentColor" d="
+        M -12.5,-34  L  9.5,-34  L  9.5,-31.5  L  5.5,-31.5
+        L  5.5, 31.5  L 40.5, 31.5  L 41.5, 29  L 43, 29
+        L 43, 34  L -5.5, 34  L -5.5,-31.5  L -12.5,-31.5  Z
+      "/>
+    </g>
+  </g>
+
+  <!-- "Lumiere" text -->
+  <text
+    x="42"
+    y="39"
+    font-family="'Instrument Serif', 'Didot', 'Bodoni MT', Georgia, serif"
+    font-style="italic"
+    font-size="32"
+    font-weight="400"
+    letter-spacing="-0.01em"
+    fill="currentColor"
+  >Lumiere</text>
+</svg>

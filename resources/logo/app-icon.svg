@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>Lumiere App Icon</title>
+  <defs>
+    <clipPath id="mask">
+      <path d="
+        M 512,0 C 604,0 652,0 698,9 C 742,18 778,36 810,58
+        C 842,82 870,110 894,142 C 918,174 936,210 950,250
+        C 964,290 974,334 980,382 C 986,430 988,470 988,512
+        C 988,554 986,594 980,642 C 974,690 964,734 950,774
+        C 936,814 918,850 894,882 C 870,914 842,942 810,966
+        C 778,988 742,1006 698,1015 C 652,1024 604,1024 512,1024
+        C 420,1024 372,1024 326,1015 C 282,1006 246,988 214,966
+        C 182,942 154,914 130,882 C 106,850 88,814 74,774
+        C 60,734 50,690 44,642 C 38,594 36,554 36,512
+        C 36,470 38,430 44,382 C 50,334 60,290 74,250
+        C 88,210 106,174 130,142 C 154,110 182,82 214,58
+        C 246,36 282,18 326,9 C 372,0 420,0 512,0 Z
+      "/>
+    </clipPath>
+
+    <radialGradient id="bg" cx="0.36" cy="0.28" r="0.78">
+      <stop offset="0" stop-color="#1b1b1d"/>
+      <stop offset="1" stop-color="#0a0a0a"/>
+    </radialGradient>
+
+    <radialGradient id="subtleGlow" cx="0.48" cy="0.44" r="0.32">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.05"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="glass" cx="0.28" cy="0.20" r="0.48">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.035"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+
+    <filter id="glow"><feGaussianBlur stdDeviation="24"/></filter>
+  </defs>
+
+  <g clip-path="url(#mask)">
+    <rect width="1024" height="1024" fill="url(#bg)"/>
+    <rect width="1024" height="1024" fill="url(#subtleGlow)"/>
+
+    <!--
+      DIDOT ITALIC L — Scaled up for icon presence
+      ==============================================
+
+      Monochrome white on dark background.
+      Brand identity comes from the serif italic letterform, not color.
+
+      translate(400, 510): shifted left to compensate for the
+      italic lean pulling the visual center rightward
+    -->
+    <g transform="translate(400, 510) skewX(-13)">
+      <!-- Glow -->
+      <g filter="url(#glow)" opacity="0.18">
+        <path fill="#ffffff" d="
+          M -128,-350  L  96,-350  L  96,-324  L  57,-324
+          L  57, 324  L 416, 324  L 425, 300  L 442, 300
+          L 442, 350  L -57, 350  L -57,-324  L -128,-324  Z
+        "/>
+      </g>
+
+      <!-- Letter -->
+      <path fill="#ffffff" d="
+        M -128,-350  L  96,-350  L  96,-324  L  57,-324
+        L  57, 324  L 416, 324  L 425, 300  L 442, 300
+        L 442, 350  L -57, 350  L -57,-324  L -128,-324  Z
+      "/>
+    </g>
+
+    <rect width="1024" height="1024" fill="url(#glass)"/>
+  </g>
+</svg>

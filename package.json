@@ -1,0 +1,45 @@
+{
+  "name": "lumiere",
+  "version": "1.0.0",
+  "description": "Lumiere - macOS video player built with Electron, Vue and TypeScript",
+  "main": "./out/main/main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "build:native": "node scripts/build_native.cjs && node -e \"if(process.platform==='darwin')require('child_process').execSync('bash fix_native_rpaths.sh',{stdio:'inherit'})\"",
+    "build:native:x64": "node scripts/build_native.cjs x64 && node -e \"if(process.platform==='darwin')require('child_process').execSync('bash fix_native_rpaths.sh x64',{stdio:'inherit'})\"",
+    "rebuild:native": "node scripts/build_native.cjs && node -e \"if(process.platform==='darwin')require('child_process').execSync('bash fix_native_rpaths.sh',{stdio:'inherit'})\"",
+    "clean:native": "node-gyp clean --directory native",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "package": "npm run build && npm run build:native && electron-builder",
+    "package:mac": "npm run build && npm run build:native && electron-builder --mac",
+    "pack": "npm run build && npm run build:native && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac --arm64 --dir --config.mac.identity=null",
+    "dist": "npm run build && npm run build:native && electron-builder --mac --arm64",
+    "dist:unsigned": "npm run build && npm run build:native && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac --arm64 --config.mac.identity=null",
+    "test:domain": "echo 'Domain model testing methods:\\n\\nMethod 1 (recommended): Use IPC commands\\n  1. Run: npm run dev\\n  2. In the renderer process console run: window.electronAPI.send(\\'test-semantic-refactoring\\')\\n  3. Check main process console output\\n\\nMethod 2: Dev mode auto-test\\n  Run: NODE_ENV=development npm run dev\\n  Tests run automatically, check main process console\\n\\nFor detailed instructions see: docs/guides/TESTING_GUIDE.md'",
+    "deploy:website": "bash scripts/deploy-website.sh"
+  },
+  "license": "GPL-3.0-only",
+  "devDependencies": {
+    "@types/node": "^20.19.25",
+    "@vitejs/plugin-vue": "^5.0.0",
+    "electron": "^41.0.0",
+    "electron-builder": "^26.4.0",
+    "electron-vite": "^2.0.0",
+    "node-addon-api": "^7.1.1",
+    "node-gyp": "^10.3.1",
+    "typescript": "5.3.3",
+    "vite": "^5.0.0",
+    "vitest": "^4.1.0",
+    "vue": "^3.4.0",
+    "vue-router": "^4.2.5",
+    "vue-tsc": "^1.8.27"
+  },
+  "dependencies": {
+    "lucide-vue-next": "^0.577.0",
+    "vue-i18n": "^9.14.4"
+  }
+}

@@ -1,0 +1,162 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import ScrollReveal from '../components/ScrollReveal.astro';
+import { getCollection, render } from 'astro:content';
+
+const entries = await getCollection('changelog');
+
+// Sort by version descending (v1.0.2 > v1.0.1 > v1.0.0)
+entries.sort((a, b) => {
+  const va = a.data.version.replace('v', '').split('.').map(Number);
+  const vb = b.data.version.replace('v', '').split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((va[i] ?? 0) !== (vb[i] ?? 0)) return (vb[i] ?? 0) - (va[i] ?? 0);
+  }
+  return 0;
+});
+---
+
+<BaseLayout
+  title="Changelog — Lumiere"
+  description="Lumiere release notes — what changed and when."
+>
+  <Nav activePage="changelog" />
+
+  <section class="w-changelog">
+    <div class="w-changelog-inner">
+      <h1 class="w-changelog-title hero-animate" data-delay="1">Changelog</h1>
+
+      {entries.map(async (entry, index) => {
+        const { Content } = await render(entry);
+        return (
+          <div class="w-changelog-entry scroll-reveal">
+            <div class="w-changelog-version">
+              <span class="w-changelog-version-tag">{entry.data.version}</span>
+              <span class="w-changelog-version-date">{entry.data.date}</span>
+              {entry.data.latest && (
+                <span class="w-changelog-version-badge">Latest</span>
+              )}
+            </div>
+            <div class="w-changelog-content">
+              <Content />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </section>
+
+  <Footer />
+  <ScrollReveal />
+</BaseLayout>
+
+<style>
+  .w-changelog {
+    padding: 120px 40px 160px;
+    background: var(--w-bg);
+    min-height: 80vh;
+  }
+
+  .w-changelog-inner {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .w-changelog-title {
+    font-family: var(--w-font-display);
+    font-size: 48px;
+    font-weight: 400;
+    font-style: italic;
+    line-height: 1.1;
+    color: var(--w-t1);
+    margin-bottom: 48px;
+    letter-spacing: -.02em;
+  }
+
+  .w-changelog-entry {
+    padding: 32px 0;
+    border-bottom: 1px solid var(--w-border);
+  }
+
+  .w-changelog-entry:first-of-type {
+    border-top: 1px solid var(--w-border);
+  }
+
+  .w-changelog-version {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .w-changelog-version-tag {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--w-t1);
+    font-family: var(--w-font-mono);
+    letter-spacing: -.02em;
+  }
+
+  .w-changelog-version-date {
+    font-size: 13px;
+    color: var(--w-t3);
+  }
+
+  .w-changelog-version-badge {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: var(--w-radius-pill);
+    background: var(--w-amber-subtle);
+    color: var(--w-amber);
+    border: 1px solid var(--w-amber-border);
+    font-family: var(--w-font-mono);
+  }
+
+  /* Style the rendered markdown list */
+  .w-changelog-content :global(ul) {
+    list-style: none;
+    padding: 0;
+  }
+
+  .w-changelog-content :global(li) {
+    font-size: 14px;
+    color: var(--w-t2);
+    padding: 4px 0;
+    padding-left: 18px;
+    position: relative;
+    line-height: 1.6;
+  }
+
+  .w-changelog-content :global(li::before) {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 12px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--w-t4);
+  }
+
+  @media (max-width: 1023px) {
+    .w-changelog {
+      padding: 100px 32px 120px;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .w-changelog {
+      padding: 100px 20px 80px;
+    }
+
+    .w-changelog-title {
+      font-size: 36px;
+      margin-bottom: 32px;
+    }
+  }
+</style>

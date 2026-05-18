@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumiere Logo Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #1c1c1e;
+    color: #f5f5f7;
+    padding: 40px;
+  }
+  h1 {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #ffffff;
+    margin-bottom: 40px;
+  }
+  .section {
+    margin-bottom: 48px;
+  }
+  .section h2 {
+    font-size: 13px;
+    font-weight: 500;
+    color: #8e8e93;
+    margin-bottom: 16px;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .preview-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .preview-box span {
+    font-size: 11px;
+    color: #636366;
+  }
+  .dark-bg {
+    background: #0a0a0a;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .light-bg {
+    background: #f5f5f7;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .checker-bg {
+    background:
+      repeating-conic-gradient(#2c2c2e 0% 25%, #3a3a3c 0% 50%) 50% / 16px 16px;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+</style>
+</head>
+<body>
+  <h1>Lumiere Logo System Preview — Monochrome</h1>
+
+  <div class="section">
+    <h2>1. App Icon (1024x1024)</h2>
+    <div class="row">
+      <div class="preview-box">
+        <div class="dark-bg">
+          <img src="app-icon.svg" width="256" height="256" alt="App Icon 256px">
+        </div>
+        <span>256px</span>
+      </div>
+      <div class="preview-box">
+        <div class="dark-bg">
+          <img src="app-icon.svg" width="128" height="128" alt="App Icon 128px">
+        </div>
+        <span>128px</span>
+      </div>
+      <div class="preview-box">
+        <div class="dark-bg">
+          <img src="app-icon.svg" width="64" height="64" alt="App Icon 64px">
+        </div>
+        <span>64px</span>
+      </div>
+      <div class="preview-box">
+        <div class="dark-bg">
+          <img src="app-icon.svg" width="32" height="32" alt="App Icon 32px">
+        </div>
+        <span>32px</span>
+      </div>
+      <div class="preview-box">
+        <div class="dark-bg">
+          <img src="app-icon.svg" width="16" height="16" alt="App Icon 16px">
+        </div>
+        <span>16px</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>2. Favicon (32x32 viewport)</h2>
+    <div class="row">
+      <div class="preview-box">
+        <div class="dark-bg">
+          <img src="favicon.svg" width="64" height="64" alt="Favicon 64px">
+        </div>
+        <span>64px (2x)</span>
+      </div>
+      <div class="preview-box">
+        <div class="dark-bg">
+          <img src="favicon.svg" width="32" height="32" alt="Favicon 32px">
+        </div>
+        <span>32px</span>
+      </div>
+      <div class="preview-box">
+        <div class="dark-bg">
+          <img src="favicon.svg" width="16" height="16" alt="Favicon 16px">
+        </div>
+        <span>16px</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>3. Mono White (on dark backgrounds)</h2>
+    <div class="row">
+      <div class="preview-box">
+        <div class="dark-bg">
+          <img src="logo-mono-white.svg" width="80" height="80" alt="Mono White 80px">
+        </div>
+        <span>80px</span>
+      </div>
+      <div class="preview-box">
+        <div class="dark-bg">
+          <img src="logo-mono-white.svg" width="40" height="40" alt="Mono White 40px">
+        </div>
+        <span>40px</span>
+      </div>
+      <div class="preview-box">
+        <div class="dark-bg">
+          <img src="logo-mono-white.svg" width="24" height="24" alt="Mono White 24px">
+        </div>
+        <span>24px</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>4. Mono Black (on light backgrounds)</h2>
+    <div class="row">
+      <div class="preview-box">
+        <div class="light-bg">
+          <img src="logo-mono-black.svg" width="80" height="80" alt="Mono Black 80px">
+        </div>
+        <span>80px</span>
+      </div>
+      <div class="preview-box">
+        <div class="light-bg">
+          <img src="logo-mono-black.svg" width="40" height="40" alt="Mono Black 40px">
+        </div>
+        <span>40px</span>
+      </div>
+      <div class="preview-box">
+        <div class="light-bg">
+          <img src="logo-mono-black.svg" width="24" height="24" alt="Mono Black 24px">
+        </div>
+        <span>24px</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>5. Wordmark</h2>
+    <div class="row">
+      <div class="preview-box">
+        <div class="light-bg" style="padding: 20px 32px;">
+          <img src="wordmark.svg" width="320" height="60" alt="Wordmark on light">
+        </div>
+        <span>On light background</span>
+      </div>
+    </div>
+    <div class="row" style="margin-top: 16px;">
+      <div class="preview-box">
+        <div class="dark-bg" style="padding: 20px 32px;">
+          <img src="wordmark.svg" width="320" height="60" alt="Wordmark on dark" style="filter: invert(1);">
+        </div>
+        <span>On dark background (inverted)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>6. All marks on checkerboard (transparency check)</h2>
+    <div class="row">
+      <div class="preview-box">
+        <div class="checker-bg">
+          <img src="logo-mono-white.svg" width="60" height="60" alt="White on checker">
+        </div>
+        <span>Mono White</span>
+      </div>
+      <div class="preview-box">
+        <div class="checker-bg">
+          <img src="logo-mono-black.svg" width="60" height="60" alt="Black on checker">
+        </div>
+        <span>Mono Black</span>
+      </div>
+      <div class="preview-box">
+        <div class="checker-bg">
+          <img src="favicon.svg" width="60" height="60" alt="Favicon on checker">
+        </div>
+        <span>Favicon</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

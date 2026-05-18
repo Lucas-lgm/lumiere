@@ -1,0 +1,136 @@
+---
+---
+
+<section class="w-features" id="features">
+  <div class="w-features-inner">
+    <div class="w-features-label scroll-reveal">Features</div>
+    <div class="w-features-grid">
+      <div class="w-feature-card scroll-reveal" data-stagger="0">
+        <div class="w-feature-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+        </div>
+        <div class="w-feature-title">Plays everything</div>
+        <div class="w-feature-desc">MKV, MP4, AVI, HEVC, AV1, HDR, Dolby Vision — no codecs to install.</div>
+      </div>
+      <div class="w-feature-card scroll-reveal" data-stagger="1">
+        <div class="w-feature-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+        </div>
+        <div class="w-feature-title">Feels native</div>
+        <div class="w-feature-desc">Not a port. Not a wrapper. Designed for macOS from day one.</div>
+      </div>
+      <div class="w-feature-card scroll-reveal" data-stagger="2">
+        <div class="w-feature-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+        </div>
+        <div class="w-feature-title">A library with memory</div>
+        <div class="w-feature-desc">Import a folder, Lumiere builds your library. Every video remembers where you stopped.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .w-features {
+    padding: 120px 40px;
+    background: var(--w-bg);
+    border-top: 1px solid var(--w-border);
+  }
+
+  .w-features-inner {
+    max-width: var(--w-max-width);
+    margin: 0 auto;
+  }
+
+  .w-features-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--w-amber);
+    margin-bottom: 16px;
+    font-family: var(--w-font-mono);
+    text-align: center;
+  }
+
+  .w-features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--w-border);
+    border-radius: var(--w-radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--w-border);
+  }
+
+  .w-feature-card {
+    padding: 48px 40px;
+    background: var(--w-bg);
+    transition: background var(--w-duration-normal);
+  }
+
+  .w-feature-card:hover {
+    background: var(--w-bg-elevated);
+  }
+
+  .w-feature-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--w-radius-md);
+    background: var(--w-amber-subtle);
+    border: 1px solid var(--w-amber-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    font-size: 18px;
+    color: var(--w-amber);
+  }
+
+  .w-feature-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--w-t1);
+    margin-bottom: 10px;
+    letter-spacing: -.02em;
+  }
+
+  .w-feature-desc {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--w-t3);
+  }
+
+  @media (max-width: 1023px) {
+    .w-features {
+      padding: 80px 32px;
+    }
+
+    .w-features-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .w-features {
+      padding: 64px 20px;
+    }
+
+    .w-feature-card {
+      padding: 32px 24px;
+    }
+
+    .w-feature-title {
+      font-size: 16px;
+    }
+  }
+</style>

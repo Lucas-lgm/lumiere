@@ -1,0 +1,157 @@
+---
+import libraryImage from '../assets/screenshots/library-home.png';
+import subtitleImage from '../assets/screenshots/subtitle-panel.png';
+import folderImage from '../assets/screenshots/folder-view.png';
+---
+
+<section class="w-screenshots">
+  <div class="w-screenshots-inner">
+    <div class="w-screenshots-label scroll-reveal">The interface</div>
+    <h2 class="w-screenshots-title scroll-reveal">Clean by default</h2>
+
+    <div class="w-screenshot-row">
+      <!-- Full-width screenshot -->
+      <div class="scroll-reveal">
+        <div class="w-screenshot-item">
+          <img src={libraryImage.src} alt="Lumiere media library with Continue Watching and Recently Added sections" width={libraryImage.width} height={libraryImage.height} loading="lazy" decoding="async" />
+        </div>
+        <div class="w-screenshot-caption">Your library, organized</div>
+      </div>
+
+      <!-- Two-up screenshots -->
+      <div class="w-screenshot-grid scroll-reveal">
+        <div>
+          <div class="w-screenshot-item">
+            <img src={subtitleImage.src} alt="Lumiere player with subtitle panel open" width={subtitleImage.width} height={subtitleImage.height} loading="lazy" decoding="async" />
+          </div>
+          <div class="w-screenshot-caption">Subtitles that work</div>
+        </div>
+        <div>
+          <div class="w-screenshot-item">
+            <img src={folderImage.src} alt="Lumiere folder view with video thumbnails" width={folderImage.width} height={folderImage.height} loading="lazy" decoding="async" />
+          </div>
+          <div class="w-screenshot-caption">Playlists &amp; folders</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .w-screenshots {
+    padding: 120px 40px;
+    background: var(--w-bg-subtle);
+    border-top: 1px solid var(--w-border);
+  }
+
+  .w-screenshots-inner {
+    max-width: var(--w-max-width);
+    margin: 0 auto;
+  }
+
+  .w-screenshots-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--w-amber);
+    margin-bottom: 12px;
+    font-family: var(--w-font-mono);
+    text-align: center;
+  }
+
+  .w-screenshots-title {
+    font-family: var(--w-font-display);
+    font-size: 40px;
+    font-weight: 400;
+    font-style: italic;
+    line-height: 1.1;
+    color: var(--w-t1);
+    text-align: center;
+    margin-bottom: 64px;
+    letter-spacing: -.02em;
+  }
+
+  .w-screenshot-row {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+
+  .w-screenshot-item {
+    position: relative;
+    border-radius: var(--w-radius-xl);
+    overflow: hidden;
+    background: #141414;
+    border: 1px solid rgba(255, 255, 255, .06);
+    box-shadow: var(--w-shadow-screenshot);
+  }
+
+  .w-screenshot-item img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .w-screenshot-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  .w-screenshot-caption {
+    text-align: center;
+    font-size: 13px;
+    color: var(--w-t3);
+    margin-top: 12px;
+    font-weight: 500;
+  }
+
+  .w-screenshot-placeholder {
+    color: var(--w-t4);
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    padding: 40px;
+  }
+
+  .w-screenshot-placeholder .label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--w-t3);
+    margin-bottom: 8px;
+    font-family: var(--w-font-mono);
+  }
+
+  @media (max-width: 1023px) {
+    .w-screenshots {
+      padding: 80px 32px;
+    }
+
+    .w-screenshots-title {
+      font-size: 32px;
+      margin-bottom: 48px;
+    }
+
+    .w-screenshot-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .w-screenshots {
+      padding: 64px 20px;
+    }
+
+    .w-screenshots-title {
+      font-size: 28px;
+      margin-bottom: 40px;
+    }
+
+    .w-screenshot-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

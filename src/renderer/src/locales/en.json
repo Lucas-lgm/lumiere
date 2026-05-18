@@ -1,0 +1,525 @@
+{
+  "settings": {
+    "title": "Settings",
+    "nav": {
+      "playback": "Playback",
+      "shortcuts": "Shortcuts",
+      "general": "General",
+      "about": "About"
+    },
+    "playback": {
+      "decoding": {
+        "title": "Decoding"
+      },
+      "hwdec": {
+        "label": "Hardware Decoding",
+        "hint": "Use GPU decoding to reduce CPU usage",
+        "auto": "Auto",
+        "autoSafe": "Safe Mode",
+        "no": "Off"
+      },
+      "hwdecCodec": {
+        "label": "Preferred Codec",
+        "auto": "Auto",
+        "videotoolbox": "VideoToolbox"
+      },
+      "behavior": {
+        "title": "Playback Behavior"
+      },
+      "rememberProgress": {
+        "label": "Remember Progress",
+        "hint": "Save playback position and resume automatically. Disabling hides \"Continue Watching\" on the home screen."
+      },
+      "autoLoadSubtitle": {
+        "label": "Auto-load Subtitles",
+        "hint": "Load matching .srt / .ass files in the same folder"
+      },
+      "autoLoadAudio": {
+        "label": "Auto-load Audio"
+      },
+      "defaultSpeed": {
+        "label": "Default Speed"
+      },
+      "chapterNav": {
+        "label": "Chapter Navigation",
+        "hint": "Use arrow keys to jump chapters instead of seeking"
+      },
+      "window": {
+        "title": "Window"
+      },
+      "windowFollowVideo": {
+        "label": "Follow Video Aspect Ratio",
+        "hint": "Auto-resize and lock window to match video aspect ratio"
+      },
+      "preferredLang": {
+        "label": "Preferred Language",
+        "hint": "Priority language for automatic subtitle and audio track selection"
+      },
+      "preferredLangList": {
+        "zh": "中文",
+        "en": "English",
+        "ja": "日本語",
+        "ko": "한국어",
+        "fr": "Français",
+        "de": "Deutsch",
+        "es": "Español",
+        "pt": "Português",
+        "ru": "Русский"
+      },
+      "enhancement": {
+        "title": "Video Enhancement",
+        "label": "Enhancement Mode",
+        "hint": "Real-time GPU shader upscaling, most effective on low-resolution video",
+        "off": "Off",
+        "crisp": "Crisp",
+        "live": "Live Action",
+        "anime": "Anime",
+        "fsr": "FSR"
+      }
+    },
+    "shortcuts": {
+      "playbackControl": {
+        "title": "Playback Control"
+      },
+      "playPause": "Play / Pause",
+      "seekBack10": "Rewind 10s",
+      "seekFwd10": "Forward 10s",
+      "seekBack30": "Rewind 30s",
+      "seekFwd30": "Forward 30s",
+      "prevVideo": "Previous Video",
+      "nextVideo": "Next Video",
+      "speedUp": "Speed Up",
+      "speedDown": "Speed Down",
+      "visualAudio": {
+        "title": "Picture & Audio"
+      },
+      "fullscreen": "Fullscreen",
+      "volumeUp": "Volume +5",
+      "volumeDown": "Volume −5",
+      "mute": "Mute",
+      "screenshot": "Screenshot",
+      "interface": {
+        "title": "Interface"
+      },
+      "openFile": "Open File",
+      "pasteUrl": "Paste URL",
+      "backLibrary": "Back to Library"
+    },
+    "general": {
+      "appearance": {
+        "title": "Appearance"
+      },
+      "theme": {
+        "label": "Theme",
+        "system": "Follow System",
+        "light": "Light",
+        "dark": "Dark"
+      },
+      "language": {
+        "label": "Language",
+        "system": "Follow System",
+        "zhCN": "Simplified Chinese",
+        "en": "English"
+      },
+      "library": {
+        "title": "Media Library"
+      },
+      "autoThumbnail": {
+        "label": "Auto-generate Thumbnails",
+        "hint": "Generate cover images when adding videos"
+      },
+      "network": {
+        "title": "Network"
+      },
+      "httpProxy": {
+        "label": "HTTP Proxy",
+        "hint": "Format: http://host:port",
+        "placeholder": "None"
+      },
+      "bufferSize": {
+        "label": "Network Buffer Size"
+      },
+      "advanced": {
+        "title": "Advanced"
+      },
+      "mpvOptions": {
+        "label": "Custom mpv Options",
+        "hint": "Extra command-line options passed to mpv",
+        "collapse": "Collapse",
+        "edit": "Edit..."
+      },
+      "logLevel": {
+        "label": "Log Level",
+        "hint": "Logs are stored in ~/Library/Logs/Lumiere/",
+        "off": "Off",
+        "fatal": "Fatal",
+        "error": "Error",
+        "warn": "Warn",
+        "info": "Info",
+        "debug": "Debug",
+        "trace": "Trace",
+        "openBtn": "Open"
+      },
+      "cacheSize": {
+        "label": "Cache Size"
+      },
+      "reset": {
+        "label": "Reset All Settings",
+        "hint": "Restore defaults, requires confirmation",
+        "btn": "Reset",
+        "confirm": "Confirm Reset",
+        "cancel": "Cancel"
+      }
+    },
+    "about": {
+      "version": "Version 1.0.0",
+      "desc": "A macOS video player built on mpv\nSupports HDR · Dolby Vision · Hardware Acceleration"
+    },
+    "shortcut": {
+      "unset": "Not set",
+      "recording": "Press a key..."
+    }
+  },
+  "sidebar": {
+    "home": "Home",
+    "series": "Series",
+    "folders": "Folders",
+    "settings": "Settings",
+    "contextMenu": {
+      "refresh": "Refresh",
+      "remove": "Remove"
+    }
+  },
+  "library": {
+    "continueWatching": "Continue Watching",
+    "recentlyAdded": "Recently Added",
+    "viewAll": "View All →",
+    "scanning": "Scanning {count} folder(s)…",
+    "series": "Series",
+    "ungrouped": "Standalone Files",
+    "folders": {
+      "count": "{count} folder(s)",
+      "ungroupedCount": "{count} standalone file(s)",
+      "empty": {
+        "title": "No folder groups",
+        "sub": "Add folders containing multiple videos and they will be grouped automatically"
+      }
+    }
+  },
+  "toolbar": {
+    "addFile": "Add Video File",
+    "addFolder": "Add Folder",
+    "addUrl": "Add Video URL",
+    "paste": "Paste: {url}"
+  },
+  "expandedView": {
+    "back": "Home",
+    "list": "List",
+    "grid": "Grid",
+    "searchPlaceholder": "Search..."
+  },
+  "videoGrid": {
+    "loading": "Loading...",
+    "emptyTitle": "No videos yet",
+    "emptySub": "Drop files or folders here. Supports external drives and NAS mounts.",
+    "dropHint": "Drop files / folders here",
+    "openFile": "Open File",
+    "addFolder": "Add Folder",
+    "pasteUrl": "Paste URL",
+    "resumeAt": "Resume {percent}%"
+  },
+  "folderCard": {
+    "resume": "Resume {name}",
+    "fileCount": "{count} file(s)",
+    "completed": "Done"
+  },
+  "folderListItem": {
+    "episodes": "{count} episode(s)",
+    "recentPlay": "Last played {name}",
+    "resume": "Resume {name}",
+    "resumeAt": "Resume {percent}%",
+    "showAll": "Show all {count} episodes...",
+    "status": {
+      "completed": "Watched",
+      "watching": "Watching",
+      "unwatched": "Unwatched"
+    }
+  },
+  "searchBox": {
+    "placeholder": "Search..."
+  },
+  "dropZone": {
+    "title": "Drop to add files",
+    "hint": "Supports video files, folders, and subtitle files"
+  },
+  "onboarding": {
+    "tip": "Press ⌘? for shortcuts · Drop files or folders to get started",
+    "dismiss": "Got it"
+  },
+  "mountPathItem": {
+    "refresh": "Refresh scan",
+    "remove": "Unmount"
+  },
+  "sourceBadge": {
+    "local": "Local",
+    "network": "Network",
+    "nas": "NAS",
+    "mounted": "Mounted",
+    "unknown": "Unknown"
+  },
+  "mainView": {
+    "allResources": "All Resources",
+    "localFiles": "Local Files",
+    "networkResources": "Network Resources",
+    "playFailed": "Failed to play video",
+    "mountPath": "Mount Path",
+    "recentlyAdded": "Recently Added",
+    "continueWatching": "Continue Watching",
+    "totalResources": "{total} resources",
+    "totalWithDetail": "{total} resources ({detail})",
+    "localCount": "{n} local",
+    "networkCount": "{n} network",
+    "mountedCount": "{n} mounted",
+    "resumeAt": "Resume {current} / {total}",
+    "resumeFailed": "Resume failed"
+  },
+  "contextMenu": {
+    "play": "Play",
+    "copyPath": "Copy File Path",
+    "showInFinder": "Show in Finder"
+  },
+  "player": {
+    "controls": {
+      "title": "Video Player",
+      "playlist": "Playlist",
+      "switching": "Switching video...",
+      "buffering": "Buffering...",
+      "bufferingPercent": "Buffering... {percent}%",
+      "seeking": "Seeking...",
+      "loading": "Loading...",
+      "resumeFrom": "Resume from {time}",
+      "pipClose": "Close PiP",
+      "pipReturn": "Return to main window",
+      "prev": "Previous",
+      "pause": "Pause",
+      "play": "Play",
+      "next": "Next",
+      "seekBack10": "Back 10s",
+      "seekFwd10": "Forward 10s",
+      "seekBack30": "Rewind 30s",
+      "seekFwd30": "Forward 30s",
+      "subtitle": "Subtitles",
+      "audioTrack": "Audio Track",
+      "speed": "Playback Speed",
+      "muteOn": "Mute",
+      "muteOff": "Unmute",
+      "more": "More",
+      "abLoop": "A-B Loop",
+      "animExport": "Animated Image",
+      "picture": "Picture",
+      "crop": "Crop",
+      "mediaInfo": "Media Info",
+      "pip": "Picture in Picture",
+      "fullscreen": "Fullscreen",
+      "chapterTitle": "Chapter {n}",
+      "audioTrackLabel": "Track {id}",
+      "volumeMark": "100% original volume"
+    },
+    "error": {
+      "cannotPlay": "Cannot Play",
+      "fileNotFound": "File Not Found",
+      "networkError": "Network Error",
+      "playbackError": "Playback Error",
+      "codecMsg": "Unsupported codec, hardware decoding required",
+      "fileNotFoundMsg": "File was moved, deleted, or the NAS volume is disconnected",
+      "networkMsg": "Network connection failed, please check your connection and retry",
+      "unknownMsg": "An unknown error occurred",
+      "softDecode": "Software Decode",
+      "retry": "Retry",
+      "relocate": "Relocate",
+      "removeFromList": "Remove from List"
+    },
+    "shortcuts": {
+      "title": "Keyboard Shortcuts",
+      "sectionPlayback": "Playback",
+      "sectionPicture": "Picture",
+      "sectionOther": "Other",
+      "sectionUI": "Interface",
+      "playPause": "Play / Pause",
+      "seekBack10": "Seek Back 10s",
+      "seekFwd10": "Seek Forward 10s",
+      "seekBack30": "Seek Back 30s",
+      "seekFwd30": "Seek Forward 30s",
+      "prevNext": "Previous / Next",
+      "speedUpDown": "Speed Up / Down",
+      "frameBack": "Frame Back",
+      "frameFwd": "Frame Forward",
+      "fullscreen": "Fullscreen",
+      "volUp": "Volume +5",
+      "volDown": "Volume −5",
+      "mute": "Mute",
+      "screenshot": "Screenshot",
+      "abLoop": "A-B Loop",
+      "openFile": "Open File",
+      "pasteUrl": "Paste URL",
+      "showPlaylist": "Show Playlist",
+      "showHelp": "Keyboard Help",
+      "backToLib": "Back to Library"
+    },
+    "url": {
+      "title": "Open Network Video",
+      "label": "Video URL",
+      "placeholder": "Paste video URL...",
+      "cancel": "Cancel",
+      "play": "Play",
+      "errorEmpty": "Please enter a URL",
+      "errorInvalid": "Please enter a valid URL (http:// or https://)"
+    }
+  },
+  "panel": {
+    "subtitle": {
+      "title": "Subtitles",
+      "tabTracks": "Tracks",
+      "tabStyle": "Style",
+      "noTracks": "No embedded subtitles",
+      "noTracksHint": "This video has no embedded subtitles. Drop a subtitle file or use AI to generate one.",
+      "primary": "Primary Track",
+      "none": "None",
+      "secondary": "Secondary Track",
+      "secondaryOff": "Off",
+      "dualHint": "Dual subtitles (bilingual)",
+      "external": "External Subtitle",
+      "selectFile": "Choose File",
+      "delay": "Delay",
+      "encoding": "Encoding",
+      "encodingAuto": "Auto",
+      "fontDefault": "System Default",
+      "bitmapHint": "Bitmap subtitles detected — font and color only apply to text subtitles (SRT/ASS)",
+      "size": "Size",
+      "font": "Font",
+      "colorStroke": "Color / Stroke",
+      "colorTitle": "Subtitle color",
+      "strokeTitle": "Stroke color",
+      "position": "Vertical Position",
+      "fontStheiti": "STHeiti",
+      "fontMsyahei": "Microsoft YaHei",
+      "trackExternal": "External",
+      "trackInternal": "Internal",
+      "trackId": "Track {id}",
+      "tabAI": "AI",
+      "aiUnavailable": "AI subtitles not available",
+      "aiUnavailableHint": "whisper-cli or ffmpeg binary missing",
+      "aiModel": "Model",
+      "aiModelDownload": "Download",
+      "aiModelDownloading": "Downloading... {percent}%",
+      "aiModelDelete": "Delete",
+      "aiLanguage": "Language",
+      "aiLanguageAuto": "Auto Detect",
+      "aiLanguageZh": "Chinese",
+      "aiLanguageEn": "English",
+      "aiLanguageJa": "Japanese",
+      "aiLanguageKo": "Korean",
+      "aiLanguageFr": "French",
+      "aiLanguageDe": "German",
+      "aiLanguageEs": "Spanish",
+      "aiLanguagePt": "Portuguese",
+      "aiLanguageRu": "Russian",
+      "aiGenerate": "Generate Subtitles",
+      "aiRegenerate": "Regenerate",
+      "aiCancel": "Cancel",
+      "aiExtracting": "Extracting audio... {percent}%",
+      "aiTranscribing": "Transcribing... {percent}%",
+      "aiComplete": "Subtitles generated",
+      "aiError": "Generation failed: {error}",
+      "aiSrtExists": "AI subtitles available",
+      "aiNoModel": "Please download a model first",
+      "aiNoVideo": "No video loaded",
+      "aiAudioTrack": "Audio Track"
+    },
+    "mediaInfo": {
+      "title": "Media Info",
+      "sectionVideo": "Video",
+      "sectionAudio": "Audio",
+      "sectionSubtitle": "Subtitles",
+      "sectionFile": "File",
+      "codec": "Codec",
+      "resolution": "Resolution",
+      "fps": "Frame Rate",
+      "bitrate": "Bitrate",
+      "hdr": "HDR",
+      "bitDepth": "Bit Depth",
+      "pixelFormat": "Pixel Format",
+      "track": "Track {n}",
+      "path": "Path",
+      "duration": "Duration",
+      "chapters": "Chapters",
+      "chaptersCount": "{n}",
+      "copyInfo": "Copy Info",
+      "showInFinder": "Show in Finder",
+      "copied": "Copied",
+      "copyFile": "File",
+      "copySize": "Size",
+      "copyCodec": "Codec",
+      "copyResolution": "Resolution",
+      "copyFps": "FPS",
+      "copyBitrate": "Bitrate",
+      "copyBitDepth": "Bit Depth",
+      "copyPixelFormat": "Pixel Format",
+      "copyDuration": "Duration",
+      "copyPath": "Path"
+    },
+    "picture": {
+      "title": "Picture",
+      "brightness": "Brightness",
+      "contrast": "Contrast",
+      "saturation": "Saturation",
+      "hue": "Hue",
+      "sharpen": "Sharpen",
+      "gamma": "Gamma",
+      "hdrMode": "HDR Mode",
+      "hdrHint": "Disable to tone-map to SDR output",
+      "rotation": "Rotation",
+      "hFlip": "Horizontal Flip",
+      "resetAll": "Reset All"
+    },
+    "animExport": {
+      "title": "Animated Image",
+      "timeRange": "Time Range",
+      "markHint": "Click to mark current playback position",
+      "duration": "Duration",
+      "fps": "Frame Rate",
+      "scale": "Resolution",
+      "quality": "Quality",
+      "qualityFast": "Standard",
+      "qualityHigh": "High",
+      "estimate": "Est. {frames} frames",
+      "extracting": "Extracting frame {current}/{total}",
+      "export": "Export",
+      "cancel": "Cancel",
+      "longDurationWarn": "Animated images longer than 30s will be very large"
+    },
+    "crop": {
+      "title": "Crop",
+      "ratioFree": "Free",
+      "reset": "Reset",
+      "apply": "Apply",
+      "applied": "Crop applied"
+    },
+    "playlist": {
+      "title": "Playlist",
+      "videoCount": "{n} videos",
+      "batchToggleTitle": "Batch select",
+      "selectedCount": "{n} selected",
+      "remove": "Remove",
+      "saveM3u": "Save .m3u",
+      "done": "Done",
+      "removeTitle": "Remove",
+      "empty": "Playlist is empty",
+      "sourceLocal": "Local",
+      "loopList": "Loop All",
+      "loopSingle": "Loop One",
+      "loopNone": "No Loop",
+      "loopShuffle": "Shuffle"
+    }
+  }
+}

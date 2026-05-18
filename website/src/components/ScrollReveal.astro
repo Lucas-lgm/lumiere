@@ -1,0 +1,118 @@
+---
+/**
+ * ScrollReveal — Client-side IntersectionObserver for scroll animations.
+ * This component injects a script that observes all `.scroll-reveal` elements
+ * and adds the `.revealed` class when they enter the viewport.
+ *
+ * Also handles hero load animation by triggering `.visible` on `.hero-animate` elements.
+ */
+---
+
+<script>
+  // Hero load sequence — trigger immediately on DOM ready
+  document.addEventListener('DOMContentLoaded', () => {
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.hero-animate').forEach((el) => {
+        el.classList.add('visible');
+      });
+    });
+  });
+
+  // Scroll reveal — IntersectionObserver
+  const revealObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('revealed');
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.1 }
+  );
+
+  document.querySelectorAll('.scroll-reveal').forEach((el) => {
+    revealObserver.observe(el);
+  });
+
+  // Download button behavior — save original DOM with cloneNode
+  const savedButtonNodes = new Map<HTMLElement, Node[]>();
+
+  function handleDownload(e: Event) {
+    e.preventDefault();
+    const target = e.currentTarget as HTMLElement;
+
+    // Detect if macOS
+    const isMac = /Mac|Macintosh/i.test(navigator.userAgent);
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    if (isMac && !isMobile) {
+      // Save original DOM state before mutating
+      if (!savedButtonNodes.has(target)) {
+        savedButtonNodes.set(
+          target,
+          Array.from(target.childNodes).map((n) => n.cloneNode(true))
+        );
+      }
+
+      // Desktop Mac — trigger download
+      target.textContent = 'Downloading...';
+      target.classList.add('downloading');
+
+      // Simulate download (replace with actual DMG URL in production)
+      // window.location.href = '/download/Lumiere.dmg';
+
+      setTimeout(() => {
+        // Restore original DOM from saved clone
+        const saved = savedButtonNodes.get(target);
+        if (saved) {
+          target.replaceChildren(...saved.map((n) => n.cloneNode(true)));
+        }
+        target.classList.remove('downloading');
+      }, 3000);
+    } else {
+      // Non-Mac or mobile — show toast
+      showToast('Available for macOS — visit this page on your Mac to download.');
+    }
+  }
+
+  function showToast(message: string) {
+    let toast = document.getElementById('w-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'w-toast';
+      toast.className = 'w-toast';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.classList.add('visible');
+
+    setTimeout(() => {
+      toast!.classList.remove('visible');
+    }, 4000);
+  }
+
+  // Attach to all download buttons
+  document.querySelectorAll('[data-download]').forEach((btn) => {
+    btn.addEventListener('click', handleDownload);
+  });
+
+  // Mobile sticky download bar — show after scrolling past Hero CTA
+  const mobileStickyDownload = document.getElementById('mobile-sticky-download');
+  const heroCta = document.querySelector('.w-hero-cta-group');
+  if (mobileStickyDownload && heroCta) {
+    const stickyObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) {
+            mobileStickyDownload.classList.add('visible');
+          } else {
+            mobileStickyDownload.classList.remove('visible');
+          }
+        });
+      },
+      { threshold: 0 }
+    );
+    stickyObserver.observe(heroCta);
+  }
+</script>

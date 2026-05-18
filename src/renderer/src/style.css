@@ -1,0 +1,445 @@
+/* ============================================================
+   Lumiere Design System — style.css
+   macOS-aligned neutral palette · Light/Dark dual theme
+   ============================================================ */
+
+/* ========== RESET ========== */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+*:focus, *:focus-visible {
+  outline: none !important;
+}
+
+/* ========== LIGHT THEME (default) ========== */
+:root {
+  /* Background */
+  --bg: #ffffff;
+  --bg-s: #fafafa;
+  --bg-e: #f5f5f7;
+  --bg-h: rgba(0, 0, 0, .04);
+  --bg-a: #d1d1d6;
+  --bg-doc: #f5f5f7;
+
+  /* Border */
+  --bd: rgba(0, 0, 0, .06);
+  --bd-h: rgba(0, 0, 0, .12);
+
+  /* Text */
+  --t1: #1d1d1f;
+  --t2: #6e6e73;
+  --t3: #8e8e93;
+
+  /* Accent */
+  --acc: #007aff;
+  --acc-d: rgba(0, 122, 255, .07);
+  --acc-h: #3395ff;
+
+  /* Semantic colors */
+  --red: #ff5f57;
+  --yel: #febc2e;
+  --grn: #34c759;
+  --ora: #ff9500;
+
+  /* Border radius */
+  --r1: 6px;  --r-s: 6px;
+  --r2: 10px; --r-m: 10px;
+  --r3: 14px; --r-l: 14px;
+
+  /* Player dark context — always dark in both themes */
+  --p-bg: #000000;
+  --p-bg-s: #1c1c1e;
+  --p-t1: #ffffff;
+  --p-t2: #8e8e93;
+  --p-t3: #636366;
+  --p-bd: rgba(255, 255, 255, .08);
+  --p-acc: rgba(255, 255, 255, .85);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, .04);
+  --shadow-md: 0 4px 24px rgba(0, 0, 0, .07), 0 1px 3px rgba(0, 0, 0, .04);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, .12);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, .08), 0 4px 12px rgba(0, 0, 0, .05);
+  --shadow-card-hover: 0 2px 8px rgba(0, 0, 0, .1), 0 8px 24px rgba(0, 0, 0, .08);
+  --shadow-popover: 0 8px 32px rgba(0, 0, 0, .18), 0 2px 8px rgba(0, 0, 0, .08);
+  --shadow-modal: 0 12px 48px rgba(0, 0, 0, .2), 0 4px 16px rgba(0, 0, 0, .1);
+
+  /* Focus ring — macOS standard */
+  --focus-ring: 0 0 0 3px rgba(0, 122, 255, .3);
+
+  /* Transition */
+  --ease-default: cubic-bezier(.4, 0, .2, 1);
+  --dur-fast: .15s;
+  --dur-normal: .2s;
+  --dur-slow: .3s;
+  --dur-panel: .28s;
+}
+
+/* ========== DARK THEME ========== */
+[data-theme="dark"] {
+  --bg: #2c2c2e;
+  --bg-s: #242426;
+  --bg-e: #3a3a3c;
+  --bg-h: rgba(255, 255, 255, .06);
+  --bg-a: #636366;
+  --bg-doc: #1c1c1e;
+
+  --bd: rgba(255, 255, 255, .08);
+  --bd-h: rgba(255, 255, 255, .15);
+
+  --t1: #ffffff;
+  --t2: #aeaeb2;
+  --t3: #8e8e93;
+
+  --acc: #0a84ff;
+  --acc-d: rgba(10, 132, 255, .12);
+  --acc-h: #409cff;
+
+  --grn: #30d158;
+  --ora: #ff9f0a;
+
+  --p-bg: #000000;
+  --p-bg-s: #1c1c1e;
+  --p-t1: #ffffff;
+  --p-t2: #8e8e93;
+  --p-t3: #636366;
+  --p-bd: rgba(255, 255, 255, .08);
+  --p-acc: rgba(255, 255, 255, .85);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, .2);
+  --shadow-md: 0 4px 24px rgba(0, 0, 0, .3), 0 1px 3px rgba(0, 0, 0, .2);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, .5);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, .3), 0 4px 12px rgba(0, 0, 0, .2);
+  --shadow-card-hover: 0 2px 8px rgba(0, 0, 0, .35), 0 8px 24px rgba(0, 0, 0, .25);
+  --shadow-popover: 0 8px 32px rgba(0, 0, 0, .5), 0 2px 8px rgba(0, 0, 0, .3);
+  --shadow-modal: 0 12px 48px rgba(0, 0, 0, .6), 0 4px 16px rgba(0, 0, 0, .3);
+}
+
+/* ========== BASE ========== */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: -apple-system, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  color: var(--t1);
+  /* Background intentionally transparent for Electron compositing.
+     Video/Control windows overlay on MPV's rendering surface.
+     Individual views (MainView, etc.) set their own background. */
+  background: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+#app {
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: transparent;
+}
+
+/* ========== SCROLLBAR ========== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, .12);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, .2);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, .12);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, .2);
+}
+
+/* ========== BUTTONS ========== */
+.btn-p {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: var(--acc);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all var(--dur-fast) var(--ease-default);
+}
+
+.btn-p:hover {
+  background: var(--acc-h);
+}
+
+.btn-p:active {
+  transform: scale(.98);
+}
+
+.btn-s {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 12px;
+  border-radius: var(--r1);
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--t2);
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease-default);
+}
+
+.btn-s:hover {
+  background: var(--bg-h);
+  color: var(--t1);
+}
+
+.btn-ic {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--t2);
+  transition: all var(--dur-fast) var(--ease-default);
+}
+
+.btn-ic:hover, .btn-i:hover {
+  color: var(--t1);
+  background: var(--bg-h);
+}
+
+.btn-i {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--t2);
+  transition: all var(--dur-fast) var(--ease-default);
+}
+
+.btn-i.on, .btn-ic.on {
+  color: var(--acc);
+}
+
+.btn-i:disabled, .btn-ic:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ========== TOGGLE ========== */
+.toggle {
+  width: 32px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--bg-a);
+  position: relative;
+  cursor: pointer;
+  transition: background var(--dur-normal);
+  flex-shrink: 0;
+  border: none;
+}
+
+.toggle.on {
+  background: var(--acc);
+}
+
+.toggle::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  top: 2px;
+  left: 2px;
+  transition: left var(--dur-normal);
+}
+
+.toggle.on::after {
+  left: 16px;
+}
+
+/* ========== SELECT BOX ========== */
+.sel-box {
+  background: var(--bg-h);
+  border-radius: var(--r1);
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--t2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--dur-fast);
+}
+
+.sel-box:hover {
+  color: var(--t1);
+  background: var(--bg-e);
+}
+
+/* ========== SEGMENTED CONTROL ========== */
+.seg {
+  display: flex;
+  background: var(--bg-e);
+  border-radius: var(--r1);
+  padding: 2px;
+  gap: 1px;
+}
+
+.seg-i {
+  padding: 4px 13px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--t2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--dur-fast);
+}
+
+.seg-i.on {
+  background: var(--bg-a);
+  color: var(--t1);
+}
+
+/* ========== PILLS ========== */
+.pill {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--t3);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all var(--dur-fast);
+}
+
+.pill.on {
+  background: var(--acc-d);
+  color: var(--acc);
+}
+
+/* ========== SLIDER ========== */
+.sl-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 148px;
+}
+
+.sl {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, .08);
+  position: relative;
+  cursor: pointer;
+}
+
+[data-theme="dark"] .sl {
+  background: rgba(255, 255, 255, .1);
+}
+
+.sl-f {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--acc);
+}
+
+.sl-v {
+  font-size: 11px;
+  color: var(--t3);
+  min-width: 28px;
+  text-align: right;
+}
+
+/* ========== INPUT ========== */
+.input {
+  background: var(--bg-h);
+  border: 1px solid var(--bd);
+  border-radius: var(--r1);
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--t1);
+  outline: none;
+  transition: border-color var(--dur-fast);
+  font-family: inherit;
+}
+
+.input:focus {
+  border-color: var(--acc);
+}
+
+.input::placeholder {
+  color: var(--t3);
+}
+
+/* ========== ICON SYSTEM ========== */
+.ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+  vertical-align: -.125em;
+  flex-shrink: 0;
+}
+
+.ico svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+/* ========== ANIMATIONS ========== */
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slide-out-right {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}

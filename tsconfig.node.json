@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "types": ["node", "electron"],
+    "composite": true,
+    "skipLibCheck": true,
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true
+  },
+  "include": [
+    "electron.vite.config.ts",
+    "src/main/**/*.ts",
+    "src/preload/**/*.ts"
+  ],
+  "exclude": [
+    "src/main/**/__tests__/**"
+  ]
+}

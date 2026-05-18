@@ -1,0 +1,79 @@
+/* ========== HERO LOAD SEQUENCE ========== */
+.hero-animate {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.hero-animate.visible {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity var(--w-duration-reveal) var(--w-ease-out),
+              transform var(--w-duration-reveal) var(--w-ease-out);
+}
+
+.hero-animate[data-delay="0"] { transition-delay: 0ms; }
+.hero-animate[data-delay="1"] { transition-delay: 100ms; transform: translateY(10px); }
+.hero-animate[data-delay="2"] { transition-delay: 200ms; transform: translateY(10px); }
+.hero-animate[data-delay="3"] {
+  transform: translateY(40px);
+  transition-delay: 350ms;
+}
+.hero-animate[data-delay="3"].visible {
+  transition-duration: 1000ms;
+}
+.hero-animate[data-delay="4"] {
+  transform: translateY(0);
+  transition-delay: 600ms;
+}
+.hero-animate[data-delay="4"].visible {
+  transition-duration: 300ms;
+}
+
+/* ========== SCROLL REVEAL ========== */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity var(--w-duration-reveal) var(--w-ease-out),
+              transform var(--w-duration-reveal) var(--w-ease-out);
+}
+
+.scroll-reveal.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Feature card stagger */
+.scroll-reveal[data-stagger="0"] { transition-delay: 0ms; }
+.scroll-reveal[data-stagger="1"] { transition-delay: 100ms; }
+.scroll-reveal[data-stagger="2"] { transition-delay: 200ms; }
+
+/* ========== PULSING DOT ========== */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .4; }
+}
+
+/* ========== DOWNLOADING PULSE ========== */
+@keyframes downloading-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .6; }
+}
+
+.downloading {
+  animation: downloading-pulse 1s infinite;
+}
+
+/* ========== REDUCED MOTION ========== */
+@media (prefers-reduced-motion: reduce) {
+  .hero-animate,
+  .scroll-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .hero-animate.visible,
+  .scroll-reveal.revealed {
+    transition: none;
+  }
+}

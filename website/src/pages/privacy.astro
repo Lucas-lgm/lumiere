@@ -1,0 +1,163 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import ScrollReveal from '../components/ScrollReveal.astro';
+---
+
+<BaseLayout
+  title="Privacy — Lumiere"
+  description="Lumiere is a local video player. Your files stay on your Mac. No data collection, no analytics, no telemetry."
+>
+  <Nav activePage="privacy" />
+
+  <section class="w-privacy">
+    <div class="w-privacy-inner">
+      <h1 class="w-privacy-title hero-animate" data-delay="1">Privacy</h1>
+      <p class="w-privacy-lead hero-animate" data-delay="2">Lumiere is a local video player. Your files stay on your Mac.</p>
+
+      <div class="w-privacy-point scroll-reveal">
+        <div class="w-privacy-point-icon"></div>
+        <div class="w-privacy-point-text">
+          <strong>No data collection</strong> — we don't track what you watch, when, or how often.
+        </div>
+      </div>
+
+      <div class="w-privacy-point scroll-reveal">
+        <div class="w-privacy-point-icon"></div>
+        <div class="w-privacy-point-text">
+          <strong>No analytics</strong> — no Google Analytics, no Mixpanel, no telemetry.
+        </div>
+      </div>
+
+      <div class="w-privacy-point scroll-reveal">
+        <div class="w-privacy-point-icon"></div>
+        <div class="w-privacy-point-text">
+          <strong>No network requests</strong> — Lumiere works fully offline. The only outbound connection is checking for updates (which you can disable).
+        </div>
+      </div>
+
+      <div class="w-privacy-point scroll-reveal">
+        <div class="w-privacy-point-icon"></div>
+        <div class="w-privacy-point-text">
+          <strong>No account required</strong> — no sign-up, no login, no cloud.
+        </div>
+      </div>
+
+      <div class="w-privacy-closing scroll-reveal">
+        Your files never leave your Mac. We never see them.<br /><br />
+        Questions? <a href="mailto:hello@lumiere.app" class="w-privacy-email">hello@lumiere.app</a>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+  <ScrollReveal />
+</BaseLayout>
+
+<style>
+  .w-privacy {
+    padding: 120px 40px 160px;
+    background: var(--w-bg);
+    min-height: 80vh;
+  }
+
+  .w-privacy-inner {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .w-privacy-title {
+    font-family: var(--w-font-display);
+    font-size: 48px;
+    font-weight: 400;
+    font-style: italic;
+    line-height: 1.1;
+    color: var(--w-t1);
+    margin-bottom: 16px;
+    letter-spacing: -.02em;
+  }
+
+  .w-privacy-lead {
+    font-size: 18px;
+    color: var(--w-t2);
+    margin-bottom: 48px;
+    line-height: 1.6;
+  }
+
+  .w-privacy-point {
+    display: flex;
+    gap: 16px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--w-border);
+  }
+
+  .w-privacy-point:first-of-type {
+    border-top: 1px solid var(--w-border);
+  }
+
+  .w-privacy-point-icon {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--w-amber);
+    flex-shrink: 0;
+    margin-top: 7px;
+  }
+
+  .w-privacy-point-text {
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--w-t2);
+  }
+
+  .w-privacy-point-text strong {
+    color: var(--w-t1);
+    font-weight: 600;
+  }
+
+  .w-privacy-closing {
+    margin-top: 48px;
+    font-size: 16px;
+    color: var(--w-t2);
+    line-height: 1.6;
+  }
+
+  .w-privacy-closing em {
+    color: var(--w-amber);
+    font-style: normal;
+    font-weight: 500;
+  }
+
+  .w-privacy-email {
+    color: var(--w-amber);
+    font-weight: 500;
+    text-decoration: none;
+    transition: opacity var(--w-duration-fast);
+  }
+
+  .w-privacy-email:hover {
+    opacity: .8;
+  }
+
+  @media (max-width: 1023px) {
+    .w-privacy {
+      padding: 100px 32px 120px;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .w-privacy {
+      padding: 100px 20px 80px;
+    }
+
+    .w-privacy-title {
+      font-size: 36px;
+    }
+
+    .w-privacy-lead {
+      font-size: 16px;
+      margin-bottom: 32px;
+    }
+  }
+</style>

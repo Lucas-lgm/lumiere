@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <title>Lumiere</title>
+  <!--
+    Simplified favicon L — optimized for 16-32px rendering.
+    Monochrome white. No gradient.
+    Slightly thicker strokes and reduced detail for clarity.
+    The italic lean is gentler (-10deg) and serifs are simplified.
+  -->
+  <g transform="translate(13.5, 16.2) skewX(-10)">
+    <path fill="#ffffff" d="
+      M -5.5,-11  L  3.5,-11  L  3.5,-9.5  L  2,-9.5
+      L  2, 9.5  L 12, 9.5  L 12.4, 8.5  L 13.5, 8.5
+      L 13.5, 11  L -2, 11  L -2,-9.5  L -5.5,-9.5  Z
+    "/>
+  </g>
+</svg>

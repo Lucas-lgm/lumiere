@@ -1,0 +1,23 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Nav from '../components/Nav.astro';
+import Hero from '../components/Hero.astro';
+import Features from '../components/Features.astro';
+import Screenshots from '../components/Screenshots.astro';
+import BottomCTA from '../components/BottomCTA.astro';
+import Footer from '../components/Footer.astro';
+import ScrollReveal from '../components/ScrollReveal.astro';
+import MobileStickyDownload from '../components/MobileStickyDownload.astro';
+---
+
+<BaseLayout title="Lumiere — Video Player for macOS" isHome={true}>
+  <Nav activePage="features" />
+  <Hero />
+  <Features />
+  <Screenshots />
+  <!-- Social Proof section — hidden at launch, will be enabled when real social proof is collected -->
+  <BottomCTA />
+  <Footer />
+  <MobileStickyDownload />
+  <ScrollReveal />
+</BaseLayout>

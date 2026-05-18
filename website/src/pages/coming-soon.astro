@@ -1,0 +1,197 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Footer from '../components/Footer.astro';
+import ScrollReveal from '../components/ScrollReveal.astro';
+---
+
+<BaseLayout
+  title="Lumiere — Coming Soon"
+  description="A video player built exclusively for macOS. Coming soon."
+>
+  <section class="w-coming">
+    <div class="w-coming-bg"></div>
+
+    <div class="w-coming-logo hero-animate" data-delay="0">L</div>
+
+    <h1 class="w-coming-title hero-animate" data-delay="1">
+      Something beautiful<br>is coming.
+    </h1>
+
+    <p class="w-coming-subtitle hero-animate" data-delay="2">
+      A video player built exclusively for macOS.
+    </p>
+
+    <form
+      class="w-coming-form hero-animate"
+      data-delay="3"
+      action="https://buttondown.com/api/emails/embed-subscribe/lumiere"
+      method="post"
+    >
+      <input
+        class="w-coming-input"
+        type="email"
+        name="email"
+        placeholder="you@email.com"
+        required
+        aria-label="Email address"
+      />
+      <button class="w-coming-submit" type="submit">Notify me</button>
+    </form>
+
+    <p class="w-coming-note hero-animate" data-delay="3">
+      No spam. One email when we launch.
+    </p>
+  </section>
+
+  <Footer />
+  <ScrollReveal />
+</BaseLayout>
+
+<style>
+  .w-coming {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    background: var(--w-bg);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .w-coming-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+      radial-gradient(ellipse at 50% 30%, rgba(255, 255, 255, .03) 0%, transparent 50%),
+      radial-gradient(ellipse at 30% 70%, rgba(255, 255, 255, .015) 0%, transparent 40%);
+    pointer-events: none;
+  }
+
+  .w-coming-logo {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    font-weight: 700;
+    color: #0a0a0a;
+    font-family: var(--w-font-display);
+    font-style: italic;
+    margin-bottom: 40px;
+    position: relative;
+    box-shadow: 0 0 40px rgba(255, 255, 255, .1);
+  }
+
+  .w-coming-title {
+    font-family: var(--w-font-display);
+    font-size: 56px;
+    font-weight: 400;
+    font-style: italic;
+    line-height: 1.1;
+    color: var(--w-t1);
+    margin-bottom: 16px;
+    position: relative;
+    letter-spacing: -.02em;
+  }
+
+  .w-coming-subtitle {
+    font-size: 18px;
+    color: var(--w-t2);
+    margin-bottom: 48px;
+    position: relative;
+  }
+
+  .w-coming-form {
+    display: flex;
+    gap: 8px;
+    max-width: 420px;
+    width: 100%;
+    position: relative;
+  }
+
+  .w-coming-input {
+    flex: 1;
+    padding: 14px 20px;
+    border-radius: var(--w-radius-pill);
+    border: 1px solid var(--w-border);
+    background: var(--w-bg-elevated);
+    color: var(--w-t1);
+    font-size: 14px;
+    outline: none;
+    font-family: var(--w-font-body);
+    transition: border-color var(--w-duration-fast);
+  }
+
+  .w-coming-input:focus {
+    border-color: rgba(255, 255, 255, .2);
+  }
+
+  .w-coming-input::placeholder {
+    color: var(--w-t4);
+  }
+
+  .w-coming-submit {
+    padding: 14px 28px;
+    border-radius: var(--w-radius-pill);
+    border: none;
+    background: var(--w-t1);
+    color: var(--w-bg);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--w-font-body);
+    transition: all var(--w-duration-fast);
+    white-space: nowrap;
+  }
+
+  .w-coming-submit:hover {
+    background: var(--w-t2);
+    transform: translateY(-1px);
+  }
+
+  .w-coming-note {
+    font-size: 12px;
+    color: var(--w-t4);
+    margin-top: 16px;
+    position: relative;
+  }
+
+  @media (max-width: 1023px) {
+    .w-coming-title {
+      font-size: 44px;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .w-coming {
+      padding: 40px 20px;
+    }
+
+    .w-coming-title {
+      font-size: 36px;
+    }
+
+    .w-coming-subtitle {
+      font-size: 16px;
+      margin-bottom: 32px;
+    }
+
+    .w-coming-form {
+      flex-direction: column;
+    }
+
+    .w-coming-input,
+    .w-coming-submit {
+      width: 100%;
+    }
+  }
+</style>
