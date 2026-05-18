@@ -35,8 +35,7 @@
     revealObserver.observe(el);
   });
 
-  // Download button behavior — save original DOM with cloneNode
-  const savedButtonNodes = new Map<HTMLElement, Node[]>();
+  // Download button behavior
 
   function handleDownload(e: Event) {
     e.preventDefault();
@@ -47,29 +46,8 @@
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
     if (isMac && !isMobile) {
-      // Save original DOM state before mutating
-      if (!savedButtonNodes.has(target)) {
-        savedButtonNodes.set(
-          target,
-          Array.from(target.childNodes).map((n) => n.cloneNode(true))
-        );
-      }
-
-      // Desktop Mac — trigger download
-      target.textContent = 'Downloading...';
-      target.classList.add('downloading');
-
-      // Simulate download (replace with actual DMG URL in production)
-      // window.location.href = '/download/Lumiere.dmg';
-
-      setTimeout(() => {
-        // Restore original DOM from saved clone
-        const saved = savedButtonNodes.get(target);
-        if (saved) {
-          target.replaceChildren(...saved.map((n) => n.cloneNode(true)));
-        }
-        target.classList.remove('downloading');
-      }, 3000);
+      // Desktop Mac — redirect to GitHub releases
+      window.location.href = 'https://github.com/Lucas-lgm/lumiere/releases';
     } else {
       // Non-Mac or mobile — show toast
       showToast('Available for macOS — visit this page on your Mac to download.');
