@@ -7,7 +7,7 @@
 [![Electron](https://img.shields.io/badge/electron-28%2B-47848f?logo=electron)](https://www.electronjs.org/)
 [![Vue](https://img.shields.io/badge/vue-3-4fc08d?logo=vue.js)](https://vuejs.org/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
-[![Website](https://img.shields.io/badge/web-lumiere--player.app-8A2BE2)](https://lumiere-player.app)
+[![Website](https://img.shields.io/badge/web-lumiere-8A2BE2)](https://lucas-lgm.github.io/lumiere/)
 
 Lumiere is a **macOS-first** video player that nails HDR playback — something most desktop video players get wrong. It embeds libmpv via a native addon and renders through `CAOpenGLLayer` with the system's full EDR (Extended Dynamic Range) pipeline.
 
