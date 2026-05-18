@@ -55,6 +55,9 @@ docs/superpowers/
 iina/
 index.html
 
+# lumiere-build repo clone (separate repository)
+lumiere-build/
+
 # Template files (dev kits, scaffolding)
 templates/
 
