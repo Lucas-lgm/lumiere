@@ -40,7 +40,7 @@ Built-in features that matter:
 
 ### Display & HDR
 - **Correct HDR out of the box** — PQ colorspace, EDR enablement, CAOpenGLLayer rendering. No config needed.
-- **Dolby Vision** — Profile 5 (streaming) and Profile 8 (iPhone) with dynamic tone mapping
+- **Dolby Vision** — Profile 5 with dynamic tone mapping
 - **Intelligent tone mapping** — auto-selects `st2094-10` for Dolby Vision, `bt.2390` (ITU-R) for HDR10
 - **SDR stays accurate** — explicit `target-trc=srgb` plus display primaries detection prevents gray/washed-out colors
 - **Conservative peak brightness** — prevents overexposure from macOS inflated EDR values
