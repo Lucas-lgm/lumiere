@@ -1,0 +1,13 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    reviewers:
+      - "Lucas-lgm"
+    labels:
+      - "dependencies"
+    ignore:
+      - dependency-name: "electron"
+        update-types: ["version-update:semver-major"]

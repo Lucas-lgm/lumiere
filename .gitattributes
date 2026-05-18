@@ -1,0 +1,6 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Binary vendored libraries
+vendor/**/*.dylib binary
+vendor/**/*.dylib filter=lfs diff=lfs merge=lfs -text
