@@ -96,24 +96,7 @@ npm install
 ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ npm install
 ```
 
-### 3. Build mpv Submodule
-```bash
-# Clone and run build scripts from lumiere-build
-git clone https://github.com/Lucas-lgm/lumiere-build.git
-cd lumiere-build
-./build_mpv.sh arm64
-cd ..
-
-# Script will:
-# 1. Configure mpv using meson
-# 2. Build libmpv.2.dylib
-# 3. Copy to vendor/mpv/darwin-arm64/lib/
-# 4. Fix dependency paths to @loader_path relative paths
-```
-
-**Details**: See [VENDOR_MANAGEMENT.md](VENDOR_MANAGEMENT.md) for vendor dependency management details.
-
-### 4. Build Native Addon
+### 3. Build Native Addon
 ```bash
 # Build native addon (Node.js native module)
 npm run build:native
@@ -409,11 +392,6 @@ npm update
 
 # Update submodules
 git submodule update --remote
-cd mpv
-git pull origin release/0.41
-cd ..
-git clone https://github.com/Lucas-lgm/lumiere-build.git
-cd lumiere-build && ./build_mpv.sh && cd ..
 ```
 
 ### Clean Build

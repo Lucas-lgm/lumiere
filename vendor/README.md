@@ -20,37 +20,6 @@ vendor/
             └── [90+ dependency libraries]
 ```
 
-## Build Scripts
-
-Build scripts are maintained in a [separate repository](https://github.com/Lucas-lgm/lumiere-build).
-
-### build_mpv.sh
-Main build script for compiling mpv and automatically copying all dependencies:
-
-```bash
-git clone https://github.com/Lucas-lgm/lumiere-build.git
-cd lumiere-build
-./build_mpv.sh
-```
-
-This script will:
-1. Configure the meson build environment
-2. Compile libmpv
-3. Automatically copy all dependencies to the vendor directory
-
-### copy_dependencies.sh
-Dependency copy script that copies all mpv dependencies to the vendor directory:
-
-```bash
-./copy_dependencies.sh
-```
-
-This script will:
-1. Analyze libmpv's dependency tree
-2. Recursively copy all non-system library dependencies (~101 library files)
-3. Create version symlinks
-4. Modify all library paths to @rpath
-
 ## Dependency Libraries
 
 ### Core
@@ -148,13 +117,7 @@ Configured in `native/binding.gyp`:
 
 ## Updating Dependencies
 
-After Homebrew updates certain dependencies, rebuild via:
-
-```bash
-git clone https://github.com/Lucas-lgm/lumiere-build.git
-cd lumiere-build
-./build_mpv.sh
-```
+When dependencies need updating, use the build scripts from the internal build repository to rebuild and copy dependencies.
 
 ## Disk Space
 
@@ -181,11 +144,7 @@ otool -L vendor/mpv/darwin-arm64/lib/libmpv.2.dylib
 
 ### Re-copy Dependencies
 
-```bash
-git clone https://github.com/Lucas-lgm/lumiere-build.git
-cd lumiere-build
-./copy_dependencies.sh
-```
+Re-copy dependencies using the build scripts from the internal build repository.
 
 ## Technical Details
 

@@ -71,8 +71,6 @@ Built-in features that matter:
 | macOS | 14+ (Sonoma) | Required for full EDR/HDR support |
 | Xcode CLI | - | `xcode-select --install` |
 | Python | 3.x | Included with macOS / Xcode |
-| Meson | 1.2+ | `brew install meson` |
-| Ninja | 1.11+ | `brew install ninja` |
 
 ### Install & Build
 
@@ -84,14 +82,10 @@ cd lumiere
 # 2. Install JS dependencies
 npm install
 
-# 3. Build mpv with gpu-next backend
-git clone https://github.com/Lucas-lgm/lumiere-build.git
-cd lumiere-build && ./build_mpv.sh arm64 && cd ..
-
-# 4. Build the native addon
+# 3. Build the native addon
 npm run build:native
 
-# 5. Start developing
+# 4. Start developing
 npm run dev
 ```
 
@@ -146,18 +140,6 @@ Send IPC `debug-hdr-status` to print full HDR pipeline state:
 mpv-side:    video-params/*, target-*, tone-mapping
 native-side: display EDR capability, layer EDR/PQ state
 ```
-
-## Building mpv from Source
-
-Build scripts are maintained in a [separate repository](https://github.com/Lucas-lgm/lumiere-build).
-
-```bash
-git clone https://github.com/Lucas-lgm/lumiere-build.git
-cd lumiere-build
-./build_mpv.sh arm64
-```
-
-The mpv submodule tracks `release/0.41` and builds to `vendor/mpv/darwin-arm64/lib/`.
 
 ## Known Issues (Resolved)
 
