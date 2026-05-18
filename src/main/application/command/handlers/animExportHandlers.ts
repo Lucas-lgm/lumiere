@@ -23,8 +23,6 @@ export function setupAnimExportHandlers(animExportService: AnimExportService): v
       filters: [
         { name: 'WebP', extensions: ['webp'] },
         { name: 'AVIF', extensions: ['avif'] },
-        { name: 'APNG', extensions: ['png'] },
-        { name: 'GIF', extensions: ['gif'] }
       ]
     })
     return canceled ? null : filePath

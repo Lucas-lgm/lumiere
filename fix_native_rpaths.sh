@@ -11,7 +11,9 @@ set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ARCH="${1:-arm64}"
 NODE_FILE="$DIR/native/build/Release/mpv_binding.node"
-VENDOR_LIB="$DIR/vendor/mpv/darwin-$ARCH/lib"
+VENDOR_MPV_LIB="$DIR/vendor/mpv/darwin-$ARCH/lib"
+VENDOR_WEBP_LIB="$DIR/vendor/webp/darwin-$ARCH/lib"
+VENDOR_AVIF_LIB="$DIR/vendor/avif/darwin-$ARCH/lib"
 
 if [ ! -f "$NODE_FILE" ]; then
     echo "Error: $NODE_FILE does not exist, please run node-gyp rebuild first"
@@ -39,8 +41,10 @@ otool -L "$NODE_FILE" | tail -n +2 | awk '{print $1}' | while IFS= read -r dep; 
         major="${BASH_REMATCH[2]}"
         soname="${base}.${major}.dylib"
 
-        # Confirm that the corresponding SONAME file or symlink exists in vendor directory
-        if [ -f "$VENDOR_LIB/$soname" ] || [ -L "$VENDOR_LIB/$soname" ]; then
+        # Confirm that the corresponding SONAME file or symlink exists in vendor directories
+        if [ -f "$VENDOR_MPV_LIB/$soname" ] || [ -L "$VENDOR_MPV_LIB/$soname" ] || \
+           [ -f "$VENDOR_WEBP_LIB/$soname" ] || [ -L "$VENDOR_WEBP_LIB/$soname" ] || \
+           [ -f "$VENDOR_AVIF_LIB/$soname" ] || [ -L "$VENDOR_AVIF_LIB/$soname" ]; then
             install_name_tool -change "$dep" "@rpath/$soname" "$NODE_FILE" 2>/dev/null || true
             echo "  $dep_name -> $soname"
         fi
@@ -58,9 +62,11 @@ otool -l "$NODE_FILE" 2>/dev/null | grep -A2 "LC_RPATH" | grep "path " | awk '{p
     fi
 done
 
-# 3. Ensure both dev and production rpaths exist
+# 3. Ensure dev and production rpaths exist
 EXPECTED_RPATHS=(
-    "@loader_path/../../../vendor/mpv/darwin-${ARCH}/lib"   # Dev environment
+    "@loader_path/../../../vendor/mpv/darwin-${ARCH}/lib"   # Dev environment (mpv)
+    "@loader_path/../../../vendor/webp/darwin-${ARCH}/lib"  # Dev environment (webp)
+    "@loader_path/../../../vendor/avif/darwin-${ARCH}/lib"  # Dev environment (avif)
     "@loader_path/../lib"                                     # Production environment
 )
 
@@ -72,10 +78,18 @@ for expected in "${EXPECTED_RPATHS[@]}"; do
     fi
 done
 
-# 4. Re-sign
+# 4. Re-sign .node and vendor dylibs (install_name_tool invalidates code signatures)
 echo ""
 echo "--- Re-signing ---"
 codesign --force --sign - "$NODE_FILE" 2>/dev/null || true
+for libdir in "$VENDOR_WEBP_LIB" "$VENDOR_AVIF_LIB"; do
+    if [ -d "$libdir" ]; then
+        for lib in "$libdir"/*.dylib; do
+            codesign --force --sign - "$lib" 2>/dev/null || true
+            echo "  Re-signed: $(basename "$lib")"
+        done
+    fi
+done
 
 echo ""
 echo "================================"

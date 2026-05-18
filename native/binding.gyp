@@ -30,7 +30,9 @@
             "CLANG_CXX_LIBRARY": "libc++",
             "MACOSX_DEPLOYMENT_TARGET": "10.15",
             "LD_RUNPATH_SEARCH_PATHS": [
-              "@loader_path/../lib"
+              "@loader_path/../lib",
+              "@loader_path/../../../vendor/mpv/darwin-arm64/lib",
+              "@loader_path/../../../vendor/webp/darwin-arm64/lib"
             ]
           },
           "link_settings": {
@@ -50,10 +52,19 @@
             ["target_arch=='arm64'", {
               "link_settings": {
                 "libraries": [
-                  "<(module_root_dir)/../vendor/mpv/darwin-arm64/lib/libmpv.2.dylib"
+                  "<(module_root_dir)/../vendor/mpv/darwin-arm64/lib/libmpv.2.dylib",
+                  "<(module_root_dir)/../vendor/webp/darwin-arm64/lib/libwebp.7.dylib",
+                  "<(module_root_dir)/../vendor/webp/darwin-arm64/lib/libwebpmux.3.dylib",
+                  "<(module_root_dir)/../vendor/webp/darwin-arm64/lib/libsharpyuv.0.dylib",
+                  "<(module_root_dir)/../vendor/avif/darwin-arm64/lib/libavif.16.dylib",
+                  "<(module_root_dir)/../vendor/avif/darwin-arm64/lib/libdav1d.7.dylib",
+                  "<(module_root_dir)/../vendor/avif/darwin-arm64/lib/libaom.3.dylib",
+                  "<(module_root_dir)/../vendor/avif/darwin-arm64/lib/libvmaf.3.dylib"
                 ],
                 "library_dirs": [
-                  "<(module_root_dir)/../vendor/mpv/darwin-arm64/lib"
+                  "<(module_root_dir)/../vendor/mpv/darwin-arm64/lib",
+                  "<(module_root_dir)/../vendor/webp/darwin-arm64/lib",
+                  "<(module_root_dir)/../vendor/avif/darwin-arm64/lib"
                 ]
               },
               "include_dirs": [
