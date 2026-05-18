@@ -75,7 +75,7 @@ YourApp.app/Contents/Resources/app.asar.unpacked/native/build/Release/mpv_bindin
 ## Deployment Checklist
 
 ### Pre-build Checks
-- [ ] Run `./build_mpv.sh` to ensure all dependencies are copied
+- [ ] Run `build_mpv.sh` from [lumiere-build](https://github.com/Lucas-lgm/lumiere-build) to ensure all dependencies are copied
 - [ ] Verify dependencies use `@loader_path` relative paths
 - [ ] Confirm bundled directory contains all libraries
 - [ ] Check native addon rpath configuration is correct
@@ -83,7 +83,7 @@ YourApp.app/Contents/Resources/app.asar.unpacked/native/build/Release/mpv_bindin
 ### Build Script
 ```bash
 #!/bin/bash
-# build_mpv.sh - Recommended configuration
+# build_mpv.sh - Recommended configuration (available in lumiere-build repo)
 
 cd mpv
 
@@ -269,7 +269,7 @@ for lib in vendor/mpv/darwin-arm64/lib/bundled/*.dylib; do
 done
 ```
 
-**Solution**: Ensure `build_mpv.sh` copies all dependencies
+**Solution**: Ensure `build_mpv.sh` (from [lumiere-build](https://github.com/Lucas-lgm/lumiere-build)) copies all dependencies
 
 ---
 
@@ -324,7 +324,7 @@ The current configuration should work directly on new user machines because:
 4. Does not rely on system Homebrew installation
 
 **Suggested Workflow**:
-1. Run `./build_mpv.sh` to ensure all dependencies are copied
+1. Run `build_mpv.sh` (from [lumiere-build](https://github.com/Lucas-lgm/lumiere-build)) to ensure all dependencies are copied
 2. Run `./scripts/verify_distribution.sh` to verify configuration
 3. Build the application: `npm run build`
 4. Test on a machine without Homebrew after actual packaging

@@ -85,7 +85,8 @@ cd lumiere
 npm install
 
 # 3. Build mpv with gpu-next backend
-./build_mpv.sh
+git clone https://github.com/Lucas-lgm/lumiere-build.git
+cd lumiere-build && ./build_mpv.sh arm64 && cd ..
 
 # 4. Build the native addon
 npm run build:native
@@ -148,12 +149,15 @@ native-side: display EDR capability, layer EDR/PQ state
 
 ## Building mpv from Source
 
+Build scripts are maintained in a [separate repository](https://github.com/Lucas-lgm/lumiere-build).
+
 ```bash
-git submodule update --init --recursive
-./build_mpv.sh
+git clone https://github.com/Lucas-lgm/lumiere-build.git
+cd lumiere-build
+./build_mpv.sh arm64
 ```
 
-The submodule tracks `release/0.41` from `git@github.com:Lucas-lgm/mpv.git` and builds to `vendor/mpv/darwin-arm64/lib/`.
+The mpv submodule tracks `release/0.41` and builds to `vendor/mpv/darwin-arm64/lib/`.
 
 ## Known Issues (Resolved)
 

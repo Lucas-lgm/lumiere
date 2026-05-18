@@ -98,8 +98,11 @@ ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ npm install
 
 ### 3. Build mpv Submodule
 ```bash
-# Run build script
-./build_mpv.sh
+# Clone and run build scripts from lumiere-build
+git clone https://github.com/Lucas-lgm/lumiere-build.git
+cd lumiere-build
+./build_mpv.sh arm64
+cd ..
 
 # Script will:
 # 1. Configure mpv using meson
@@ -295,8 +298,7 @@ mpv-player/
 ├── vendor/                # Prebuilt dependency libraries
 │   └── mpv/darwin-arm64/lib/  # libmpv dynamic library
 ├── mpv/                   # mpv submodule (gpu-next backend)
-├── docs/                  # Documentation
-└── build_mpv.sh           # mpv build script
+└── docs/                  # Documentation
 ```
 
 ---
@@ -410,7 +412,8 @@ git submodule update --remote
 cd mpv
 git pull origin release/0.41
 cd ..
-./build_mpv.sh
+git clone https://github.com/Lucas-lgm/lumiere-build.git
+cd lumiere-build && ./build_mpv.sh && cd ..
 ```
 
 ### Clean Build

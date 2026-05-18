@@ -5,8 +5,9 @@ macOS video player (Electron + Vue 3 + TypeScript + libmpv).
 ## Development
 
 ```bash
-# Build mpv submodule
-./build_mpv.sh
+# Build mpv submodule (scripts in https://github.com/Lucas-lgm/lumiere-build)
+git clone https://github.com/Lucas-lgm/lumiere-build.git
+cd lumiere-build && ./build_mpv.sh arm64 && cd ..
 
 # Build native addon
 npm run build:native
