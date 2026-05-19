@@ -9,7 +9,7 @@ function buildAfFilter(bands: number[]): string {
     const freq = EQUALIZER_FREQUENCIES[i]
     return `equalizer=frequency=${freq}:width_type=o:width=1:gain=${gain}`
   })
-  return `lavfi=[${filters.join('@')}]`
+  return `lavfi=[${filters.join(',')}]`
 }
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -18,7 +18,7 @@ function applyEqToMpv(filterString: string) {
   if (debounceTimer) clearTimeout(debounceTimer)
   debounceTimer = setTimeout(() => {
     debounceTimer = null
-    window.electronAPI?.playerProperty?.command('af-set', filterString)
+    window.electronAPI?.playerProperty?.set('af', filterString)
   }, 150)
 }
 
@@ -90,7 +90,7 @@ export function useAudioEqualizer() {
     if (enabled.value) {
       applyEqToMpv(buildAfFilter(bands.value))
     } else {
-      window.electronAPI?.playerProperty?.command('af-del', 'lavfi')
+      window.electronAPI?.playerProperty?.set('af', '')
     }
     await saveState()
   }
