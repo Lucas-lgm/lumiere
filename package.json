@@ -29,7 +29,7 @@
     "electron": "^41.0.0",
     "electron-builder": "^26.4.0",
     "electron-vite": "^2.0.0",
-    "node-addon-api": "^7.1.1",
+    "node-addon-api": "^8.7.0",
     "node-gyp": "^10.3.1",
     "typescript": "5.3.3",
     "vite": "^5.0.0",
