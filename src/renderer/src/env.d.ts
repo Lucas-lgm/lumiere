@@ -8,7 +8,8 @@ import type {
   ThumbnailReady,
   BackendSettings,
   ThemeState,
-  MountPathScanned
+  MountPathScanned,
+  EqualizerState
 } from '../../shared/types/ipc'
 
 declare module '*.vue' {
@@ -79,6 +80,14 @@ interface Window {
       set: (property: string, value: any) => Promise<void>
       command: (...args: string[]) => Promise<void>
       getMediaInfo: () => Promise<MediaInfo | null>
+    }
+
+    // Equalizer API
+    equalizer: {
+      getState: () => Promise<EqualizerState>
+      saveState: (state: { enabled: boolean; bands: number[]; currentPreset: string }) => Promise<void>
+      savePreset: (name: string, bands: number[]) => Promise<void>
+      deletePreset: (name: string) => Promise<void>
     }
 
     // WatchProgress API (P3 Phase 1)

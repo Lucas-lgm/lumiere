@@ -136,6 +136,10 @@
             <Icon name="info" :size="14" />
             <span>{{ $t('player.controls.mediaInfo') }}</span>
           </button>
+          <button class="mm-item" @click="onMoreMenuItem('equalizer')">
+            <Icon name="sliders-horizontal" :size="14" />
+            <span>{{ $t('player.controls.equalizer') }}</span>
+          </button>
           <div class="mm-divider"></div>
           <button class="mm-item" @click="onMoreMenuItem('animExport')">
             <Icon name="film" :size="14" />

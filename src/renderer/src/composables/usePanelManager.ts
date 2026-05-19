@@ -1,6 +1,6 @@
 import { ref, computed, readonly } from 'vue'
 
-export type PanelName = 'subtitle' | 'picture' | 'crop' | 'mediaInfo' | 'playlist' | 'animExport'
+export type PanelName = 'subtitle' | 'picture' | 'crop' | 'mediaInfo' | 'playlist' | 'animExport' | 'equalizer'
 
 // Functional panels — mutually exclusive within group, and with playlist
 const FUNCTIONAL_PANELS: PanelName[] = ['subtitle', 'picture', 'crop', 'mediaInfo']

@@ -67,6 +67,12 @@ export const IPC_CHANNELS = {
   PLAYER_GET_MEDIA_INFO: 'player:get-media-info',
   PLAYER_COMMAND: 'player:command',
 
+  // Equalizer
+  EQUALIZER_GET_STATE: 'equalizer:get-state',
+  EQUALIZER_SAVE_STATE: 'equalizer:save-state',
+  EQUALIZER_SAVE_PRESET: 'equalizer:save-preset',
+  EQUALIZER_DELETE_PRESET: 'equalizer:delete-preset',
+
   // Resume progress
   WATCH_PROGRESS_GET: 'progress:get',
   WATCH_PROGRESS_GET_ALL: 'progress:get-all',

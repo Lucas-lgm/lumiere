@@ -6,6 +6,7 @@
 
 import type { PlayerTrack } from '../playback/MediaPlayer'
 import type { AppSettings, WatchProgress } from '../config/configManager'
+import type { EqualizerState } from '../../../../shared/types/ipc'
 
 /**
  * Narrow interface for non-orchestrated player operations routed
@@ -180,6 +181,18 @@ export interface WatchProgressQueryPort {
 export interface ThemeConfigPort {
   getThemePreference(): 'system' | 'light' | 'dark'
   setThemePreference(pref: 'system' | 'light' | 'dark'): void
+}
+
+/**
+ * Narrow interface for equalizer persistence used by equalizer handlers.
+ *
+ * ConfigManager satisfies this interface structurally.
+ */
+export interface EqualizerConfigPort {
+  getEqualizerState(): EqualizerState
+  setEqualizerState(state: { enabled: boolean; bands: number[]; currentPreset: string }): void
+  saveEqualizerPreset(name: string, bands: number[]): void
+  deleteEqualizerPreset(name: string): void
 }
 
 /**

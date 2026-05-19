@@ -30,6 +30,11 @@
       :hdr-enabled="hdrEnabled"
       @close="closePanel"
     />
+    <EqualizerPanel
+      :visible="activePanel === 'equalizer'"
+      context="player"
+      @close="closePanel"
+    />
     <MediaInfoPanel
       :visible="activePanel === 'mediaInfo'"
       context="player"
@@ -91,6 +96,7 @@ import MediaInfoPanel from '../components/panels/MediaInfoPanel.vue'
 import PlaylistPanel from '../components/panels/PlaylistPanel.vue'
 import CropPanel from '../components/panels/CropPanel.vue'
 import AnimExportPanel from '../components/panels/AnimExportPanel.vue'
+import EqualizerPanel from '../components/panels/EqualizerPanel.vue'
 import ErrorOverlay from '../components/player/ErrorOverlay.vue'
 import PlayerTopBar from '../components/player/PlayerTopBar.vue'
 import PlayerHud from '../components/player/PlayerHud.vue'

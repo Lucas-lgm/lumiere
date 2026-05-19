@@ -100,6 +100,35 @@ export interface ThemeState {
   resolved: 'light' | 'dark'
 }
 
+/** Audio equalizer state */
+export const EQUALIZER_BANDS = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000] as const
+export const EQ_BAND_COUNT = 10
+export const EQ_GAIN_MIN = -12
+export const EQ_GAIN_MAX = 12
+
+export interface EqualizerState {
+  enabled: boolean
+  bands: number[]              // 10 values, -12 ~ +12 dB
+  currentPreset: string        // 'flat' | 'pop' | 'rock' | 'classical' | 'jazz' | 'vocal' | 'custom'
+  customPresets: Record<string, number[]>
+}
+
+export const DEFAULT_EQUALIZER_STATE: EqualizerState = {
+  enabled: false,
+  bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  currentPreset: 'flat',
+  customPresets: {},
+}
+
+export const BUILTIN_PRESETS: Record<string, number[]> = {
+  flat: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  pop: [1, 3, 4, 5, 3, 1, -1, -1, 1, 1],
+  rock: [4, 3, 2, 1, -1, -2, 1, 3, 4, 4],
+  classical: [2, 2, 1, 1, 1, 1, 2, 2, 3, 4],
+  jazz: [3, 2, 1, 2, 3, 2, 1, 2, 3, 3],
+  vocal: [-2, -2, -1, 1, 3, 4, 3, 1, -1, -2],
+}
+
 /** Mount path resource event */
 export interface MountPathScanned {
   id: string

@@ -319,6 +319,7 @@
       "picture": "画面调整",
       "crop": "裁剪",
       "mediaInfo": "媒体信息",
+      "equalizer": "均衡器",
       "pip": "画中画",
       "fullscreen": "全屏",
       "chapterTitle": "章节 {n}",
@@ -480,6 +481,21 @@
       "hdrHint": "关闭后将 tone-map 至 SDR 输出",
       "rotation": "旋转",
       "hFlip": "水平翻转",
+      "resetAll": "重置全部"
+    },
+    "equalizer": {
+      "title": "均衡器",
+      "enable": "均衡器",
+      "preset": "预设",
+      "flat": "平坦",
+      "pop": "流行",
+      "rock": "摇滚",
+      "classical": "古典",
+      "jazz": "爵士",
+      "vocal": "人声",
+      "custom": "自定义",
+      "savePreset": "另存为预设",
+      "presetName": "预设名称",
       "resetAll": "重置全部"
     },
     "animExport": {

@@ -4,7 +4,7 @@ import type { ThumbnailService } from '../services/thumbnailService'
 import type { WhisperService } from '../services/whisperService'
 import type { AnimExportService } from '../services/animExportService'
 import type { MountPathService } from '../services/mountPathService'
-import type { PlaybackIntentPort, WindowOpsPort, PlayerDirectPort, SettingsPort, WatchProgressQueryPort, ThemeConfigPort } from './ipcTypes'
+import type { PlaybackIntentPort, WindowOpsPort, PlayerDirectPort, SettingsPort, WatchProgressQueryPort, ThemeConfigPort, EqualizerConfigPort } from './ipcTypes'
 import { setupFileHandlers } from './handlers/fileHandlers'
 import { setupPlaybackHandlers } from './handlers/playbackHandlers'
 import { setupPlaylistHandlers } from './handlers/playlistHandlers'
@@ -19,6 +19,7 @@ import { setupThemeHandlers, type ThemeOps } from './handlers/themeHandlers'
 import { setupSettingsHandlers } from './handlers/settingsHandlers'
 import { setupTranscriptionHandlers } from './handlers/transcriptionHandlers'
 import { setupAnimExportHandlers } from './handlers/animExportHandlers'
+import { setupEqualizerHandlers } from './handlers/equalizerHandlers'
 
 /**
  * Explicit deps for IPC handler registration.
@@ -81,6 +82,8 @@ export interface IpcHandlerDeps {
   watchProgress: WatchProgressQueryPort
   /** Theme preference persistence (ConfigManager via ThemeConfigPort). */
   themeConfig: ThemeConfigPort
+  /** Equalizer state persistence (ConfigManager via EqualizerConfigPort). */
+  equalizerConfig: EqualizerConfigPort
   thumbnailService: ThumbnailService
   whisperService: WhisperService
   animExportService: AnimExportService
@@ -111,7 +114,7 @@ export interface IpcHandlerOps {
  * Split into multiple handler modules by functional domain, main file serves as the unified registration entry point
  */
 export function setupIpcHandlers(deps: IpcHandlerDeps): IpcHandlerOps {
-  const { openFile, quit, coordinator, broadcastPlaylist, commands, windowManager, playerOps, settings, setVolume, watchProgress, themeConfig, thumbnailService, whisperService, animExportService, mountPathService } = deps
+  const { openFile, quit, coordinator, broadcastPlaylist, commands, windowManager, playerOps, settings, setVolume, watchProgress, themeConfig, equalizerConfig, thumbnailService, whisperService, animExportService, mountPathService } = deps
 
   // Register all handlers by functional domain
   setupFileHandlers(openFile)
@@ -151,6 +154,9 @@ export function setupIpcHandlers(deps: IpcHandlerDeps): IpcHandlerOps {
     themeConfig,
     (ch, p) => windowManager.sendToControl(ch, p),
   )
+
+  // Equalizer state persistence
+  setupEqualizerHandlers(equalizerConfig)
 
   // AI subtitle transcription
   setupTranscriptionHandlers(whisperService)

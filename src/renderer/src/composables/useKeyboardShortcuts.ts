@@ -184,6 +184,13 @@ export function useKeyboardShortcuts(
       return
     }
 
+    // ── ⌘E: equalizer panel ──
+    if (key.toLowerCase() === 'e' && metaKey && !shiftKey && !ctrlKey) {
+      e.preventDefault()
+      callbacks.onTogglePanel('equalizer')
+      return
+    }
+
     // ── ⌘P: playlist panel ──
     if (key.toLowerCase() === 'p' && metaKey && !shiftKey && !ctrlKey) {
       e.preventDefault()

@@ -1,6 +1,8 @@
 import { app } from 'electron'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { join } from 'path'
+import type { EqualizerState } from '../../../shared/types/ipc'
+import { DEFAULT_EQUALIZER_STATE, EQ_GAIN_MIN, EQ_GAIN_MAX } from '../../../shared/types/ipc'
 
 /**
  * Application settings data model
@@ -76,6 +78,10 @@ export class ConfigManager {
   private readonly configPath: string
   private watchProgress: Record<string, WatchProgress> = {}
   private appSettings: AppSettings = { ...DEFAULT_APP_SETTINGS }
+  private equalizer: EqualizerState = {
+    ...DEFAULT_EQUALIZER_STATE,
+    bands: [...DEFAULT_EQUALIZER_STATE.bands],
+  }
 
   /** Throttled save: avoid high-frequency writes during playback */
   private saveTimer: ReturnType<typeof setTimeout> | null = null
@@ -123,6 +129,21 @@ export class ConfigManager {
         if (typeof b.x === 'number' && typeof b.y === 'number' &&
             typeof b.width === 'number' && typeof b.height === 'number') {
           this.windowBounds = { x: b.x, y: b.y, width: b.width, height: b.height }
+        }
+      }
+
+      // equalizer
+      if (data.equalizer && typeof data.equalizer === 'object') {
+        const eq = data.equalizer as any
+        if (Array.isArray(eq.bands) && eq.bands.length === 10) {
+          this.equalizer = {
+            enabled: !!eq.enabled,
+            bands: eq.bands.map((b: number) => Math.max(EQ_GAIN_MIN, Math.min(EQ_GAIN_MAX, b))),
+            currentPreset: typeof eq.currentPreset === 'string' ? eq.currentPreset : 'flat',
+            customPresets: (eq.customPresets && typeof eq.customPresets === 'object')
+              ? { ...eq.customPresets }
+              : {},
+          }
         }
       }
 
@@ -176,6 +197,7 @@ export class ConfigManager {
         volume: this.volume,
         themePreference: this.themePreference,
         watchProgress: this.watchProgress,
+        equalizer: this.equalizer,
         appSettings: this.appSettings
       }
       if (this.windowBounds) {
@@ -244,6 +266,31 @@ export class ConfigManager {
 
   resetAppSettings(): void {
     this.appSettings = { ...DEFAULT_APP_SETTINGS }
+    this.saveImmediate()
+  }
+
+  getEqualizerState(): EqualizerState {
+    return {
+      ...this.equalizer,
+      bands: [...this.equalizer.bands],
+      customPresets: { ...this.equalizer.customPresets },
+    }
+  }
+
+  setEqualizerState(state: { enabled: boolean; bands: number[]; currentPreset: string }): void {
+    this.equalizer.enabled = state.enabled
+    this.equalizer.bands = state.bands.map(b => Math.max(EQ_GAIN_MIN, Math.min(EQ_GAIN_MAX, b)))
+    this.equalizer.currentPreset = state.currentPreset
+    this.saveImmediate()
+  }
+
+  saveEqualizerPreset(name: string, bands: number[]): void {
+    this.equalizer.customPresets[name] = bands.map(b => Math.max(EQ_GAIN_MIN, Math.min(EQ_GAIN_MAX, b)))
+    this.saveImmediate()
+  }
+
+  deleteEqualizerPreset(name: string): void {
+    delete this.equalizer.customPresets[name]
     this.saveImmediate()
   }
 

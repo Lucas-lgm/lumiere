@@ -268,6 +268,7 @@ export class VideoPlayerApp {
       setVolume: (v) => this.settingsBridge.setPlaybackVolume(v),
       watchProgress: this.config,
       themeConfig: this.config,
+      equalizerConfig: this.config,
       thumbnailService: this.thumbnailService,
       whisperService: this.whisperService,
       animExportService: this.animExportService,

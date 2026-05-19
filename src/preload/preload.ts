@@ -116,6 +116,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     command: (...args: string[]) => ipcRenderer.invoke('player:command', ...args),
   },
 
+  // Equalizer API
+  equalizer: {
+    getState: () => ipcRenderer.invoke('equalizer:get-state'),
+    saveState: (state: { enabled: boolean; bands: number[]; currentPreset: string }) =>
+      ipcRenderer.invoke('equalizer:save-state', state),
+    savePreset: (name: string, bands: number[]) =>
+      ipcRenderer.invoke('equalizer:save-preset', name, bands),
+    deletePreset: (name: string) =>
+      ipcRenderer.invoke('equalizer:delete-preset', name),
+  },
+
   // Animation export API
   animExport: {
     start: (config: any) => ipcRenderer.invoke('anim:start', config),

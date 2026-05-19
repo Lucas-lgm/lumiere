@@ -319,6 +319,7 @@
       "picture": "Picture",
       "crop": "Crop",
       "mediaInfo": "Media Info",
+      "equalizer": "Equalizer",
       "pip": "Picture in Picture",
       "fullscreen": "Fullscreen",
       "chapterTitle": "Chapter {n}",
@@ -480,6 +481,21 @@
       "hdrHint": "Disable to tone-map to SDR output",
       "rotation": "Rotation",
       "hFlip": "Horizontal Flip",
+      "resetAll": "Reset All"
+    },
+    "equalizer": {
+      "title": "Equalizer",
+      "enable": "Equalizer",
+      "preset": "Preset",
+      "flat": "Flat",
+      "pop": "Pop",
+      "rock": "Rock",
+      "classical": "Classical",
+      "jazz": "Jazz",
+      "vocal": "Vocal",
+      "custom": "Custom",
+      "savePreset": "Save as Preset",
+      "presetName": "Preset Name",
       "resetAll": "Reset All"
     },
     "animExport": {
