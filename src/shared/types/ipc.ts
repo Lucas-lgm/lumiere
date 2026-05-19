@@ -121,12 +121,13 @@ export const DEFAULT_EQUALIZER_STATE: EqualizerState = {
 }
 
 export const BUILTIN_PRESETS: Record<string, number[]> = {
+  // Source: IINA 1.3+ (macOS mpv-based player) — 22 presets, ISO 10-band (31-16000 Hz)
   flat: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  pop: [1, 3, 4, 5, 3, 1, -1, -1, 1, 1],
-  rock: [4, 3, 2, 1, -1, -2, 1, 3, 4, 4],
-  classical: [2, 2, 1, 1, 1, 1, 2, 2, 3, 4],
-  jazz: [3, 2, 1, 2, 3, 2, 1, 2, 3, 3],
-  vocal: [-2, -2, -1, 1, 3, 4, 3, 1, -1, -2],
+  pop: [-1.5, -1, 0, 2, 4, 4, 2, 0, -1, -1.5],
+  rock: [5, 4, 3, 1.5, -0.5, -1, 0.5, 2.5, 3.5, 4.5],
+  classical: [4.75, 3.75, 3, 2.5, -1.5, -1.5, 0, 2.25, 3.25, 3.75],
+  jazz: [4, 3, 1.5, 2.25, -1.5, -1.5, 0, 1.5, 3, 3.75],
+  vocal: [-1.5, -3, -3, 1.5, 3.75, 3.75, 3, 1.5, 0, -1.5],
 }
 
 /** Mount path resource event */
